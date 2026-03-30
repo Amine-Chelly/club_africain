@@ -10,7 +10,10 @@
     "signIn": "دخول",
     "signOut": "خروج",
     "admin": "إدارة",
-    "cart": "السلة"
+    "cart": "السلة",
+    "toggleTheme": "تغيير النمط",
+    "themeLight": "نمط فاتح",
+    "themeDark": "نمط داكن"
   },
   "home": {
     "since": "منذ 1920",

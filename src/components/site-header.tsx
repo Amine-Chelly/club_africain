@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { ClubLogo } from "@/components/club-logo";
 import { SignOutButton } from "@/components/sign-out-button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
@@ -23,6 +24,7 @@ export async function SiteHeader() {
           className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-2"
           aria-label="Main"
         >
+          <ThemeToggle />
           <Link
             href="/club"
             className="text-muted hover:text-primary focus-visible:ring-primary rounded-md px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-3"

@@ -10,7 +10,10 @@
     "signIn": "Connexion",
     "signOut": "Déconnexion",
     "admin": "Admin",
-    "cart": "Panier"
+    "cart": "Panier",
+    "toggleTheme": "Changer de thème",
+    "themeLight": "Mode clair",
+    "themeDark": "Mode sombre"
   },
   "home": {
     "since": "Depuis 1920",

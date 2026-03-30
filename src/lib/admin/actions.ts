@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import type { InputJsonValue } from "@prisma/client/runtime/client";
 import {
   AgeGroup,
   OrderStatus,
@@ -57,7 +58,7 @@ async function audit(
         level,
         action,
         userId,
-        meta: (meta ?? undefined) as any,
+        meta: (meta ?? undefined) as unknown as InputJsonValue,
       },
     });
   } catch (e) {

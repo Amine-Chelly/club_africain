@@ -10,7 +10,10 @@
     "signIn": "Sign in",
     "signOut": "Sign out",
     "admin": "Admin",
-    "cart": "Cart"
+    "cart": "Cart",
+    "toggleTheme": "Change theme",
+    "themeLight": "Light mode",
+    "themeDark": "Dark mode"
   },
   "home": {
     "since": "Since 1920",
