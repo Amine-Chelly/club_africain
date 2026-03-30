@@ -1,0 +1,55 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
+
+export const dynamic = "force-dynamic";
+
+/** Creates an order from the logged-in user's cart. Stripe can be wired here when your account supports TND. */
+export async function POST() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  const cart = await prisma.cart.findUnique({
+    where: { userId: session.user.id },
+    include: { items: { include: { product: true } } },
+  });
+
+  if (!cart?.items.length) {
+    return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+  }
+
+  const totalCents = cart.items.reduce((s, i) => s + i.quantity * i.product.priceCents, 0);
+
+  const order = await prisma.order.create({
+    data: {
+      userId: session.user.id,
+      totalCents,
+      status: "PAID",
+      items: {
+        create: cart.items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+          priceCents: i.product.priceCents,
+        })),
+      },
+    },
+  });
+
+  await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+  await prisma.auditLog.create({
+    data: {
+      level: "info",
+      action: "shop.checkout",
+      userId: session.user.id,
+      meta: { orderId: order.id, totalCents },
+    },
+  });
+
+  logger.info({ action: "checkout.completed", orderId: order.id });
+
+  return NextResponse.json({ orderId: order.id, mockPaid: true });
+}

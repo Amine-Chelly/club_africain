@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Sport {
+  FOOTBALL
+  HANDBALL
+  BASKETBALL
+  VOLLEYBALL
+  TENNIS
+  OTHER
+}
+
+enum TeamCategory {
+  TEAM_SPORT
+  INDIVIDUAL
+}
+
+enum AgeGroup {
+  U8
+  U11
+  U13
+  U15
+  U17
+  U19
+  U21
+  U23
+  SENIOR
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  role          Role      @default(USER)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+  cart          Cart?
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  sport       Sport
+  category    TeamCategory
+  ageGroup    AgeGroup
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  players     Player[]
+  staff       Staff[]
+  fixtures    Fixture[]
+}
+
+model Player {
+  id          String   @id @default(cuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name        String
+  number      Int?
+  position    String?
+  nationality String?
+  appearances Int      @default(0)
+  goals       Int      @default(0)
+}
+
+model Staff {
+  id     String @id @default(cuid())
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name   String
+  role   String
+}
+
+model Fixture {
+  id           String   @id @default(cuid())
+  teamId       String
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  kickoffAt    DateTime
+  opponent     String
+  venue        String
+  isHome       Boolean  @default(true)
+  homeScore    Int?
+  awayScore    Int?
+  competition  String
+  status       String   @default("SCHEDULED")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String
+  priceCents  Int
+  category    String
+  imageUrl    String?
+  stock       Int         @default(0)
+  active      Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId String?    @unique
+  items     CartItem[]
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                OrderStatus @default(PENDING)
+  totalCents            Int
+  stripePaymentIntentId String?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  items                 OrderItem[]
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  quantity   Int
+  priceCents Int
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  locale    String   @default("fr")
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  level     String
+  action    String
+  userId    String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+}

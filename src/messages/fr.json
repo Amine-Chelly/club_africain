@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Club Africain — النادي الإفريقي",
+    "description": "Site du Club Africain : histoire depuis 1920, équipes, boutique et communauté."
+  },
+  "nav": {
+    "club": "Le club",
+    "teams": "Équipes",
+    "shop": "Boutique",
+    "signIn": "Connexion",
+    "signOut": "Déconnexion",
+    "admin": "Admin",
+    "cart": "Panier"
+  },
+  "home": {
+    "since": "Depuis 1920",
+    "title": "Club Africain",
+    "subtitle": "Bienvenue sur le site du club : histoire, équipes, boutique et supporters.",
+    "ctaClub": "Découvrir le club",
+    "ctaShop": "Boutique"
+  },
+  "footer": {
+    "tagline": "النادي الإفريقي — Depuis 1920",
+    "blurb": "Site officiel du club : histoire, équipes, boutique et actualités.",
+    "links": "Liens",
+    "presentation": "Présentation",
+    "copyright": "© {year} Club Africain. Tous droits réservés."
+  },
+  "club": {
+    "title": "Le club",
+    "history": "Histoire",
+    "trophies": "Palmarès",
+    "stadium": "Stade & supporters",
+    "timeline": "Chronologie"
+  },
+  "teams": {
+    "title": "Équipes",
+    "filterSport": "Sport",
+    "filterAge": "Catégorie d'âge",
+    "viewTeam": "Voir l'équipe",
+    "squad": "Effectif",
+    "staff": "Staff",
+    "fixtures": "Calendrier & résultats",
+    "stats": "Statistiques"
+  },
+  "shop": {
+    "title": "Boutique",
+    "addToCart": "Ajouter au panier",
+    "price": "{price} TND",
+    "checkout": "Commander",
+    "loginToBuy": "Connectez-vous pour acheter"
+  },
+  "auth": {
+    "signInTitle": "Connexion",
+    "registerTitle": "Créer un compte",
+    "email": "Email",
+    "password": "Mot de passe",
+    "name": "Nom",
+    "submit": "Valider",
+    "noAccount": "Pas de compte ?",
+    "hasAccount": "Déjà un compte ?"
+  },
+  "admin": {
+    "title": "Administration",
+    "dashboard": "Tableau de bord",
+    "teams": "Équipes",
+    "products": "Produits",
+    "orders": "Commandes"
+  }
+}

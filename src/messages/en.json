@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "title": "Club Africain — النادي الإفريقي",
+    "description": "Official Club Africain website: history since 1920, teams, store, and community."
+  },
+  "nav": {
+    "club": "Club",
+    "teams": "Teams",
+    "shop": "Shop",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "admin": "Admin",
+    "cart": "Cart"
+  },
+  "home": {
+    "since": "Since 1920",
+    "title": "Club Africain",
+    "subtitle": "Welcome: history, teams, store, and supporters.",
+    "ctaClub": "Discover the club",
+    "ctaShop": "Shop"
+  },
+  "footer": {
+    "tagline": "النادي الإفريقي — Since 1920",
+    "blurb": "Official site: history, teams, store, and news.",
+    "links": "Links",
+    "presentation": "Presentation",
+    "copyright": "© {year} Club Africain. All rights reserved."
+  },
+  "club": {
+    "title": "The club",
+    "history": "History",
+    "trophies": "Honours",
+    "stadium": "Stadium & fans",
+    "timeline": "Timeline"
+  },
+  "teams": {
+    "title": "Teams",
+    "filterSport": "Sport",
+    "filterAge": "Age group",
+    "viewTeam": "View team",
+    "squad": "Squad",
+    "staff": "Staff",
+    "fixtures": "Fixtures & results",
+    "stats": "Statistics"
+  },
+  "shop": {
+    "title": "Store",
+    "addToCart": "Add to cart",
+    "price": "{price} TND",
+    "checkout": "Checkout",
+    "loginToBuy": "Sign in to purchase"
+  },
+  "auth": {
+    "signInTitle": "Sign in",
+    "registerTitle": "Create account",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "submit": "Submit",
+    "noAccount": "No account?",
+    "hasAccount": "Already have an account?"
+  },
+  "admin": {
+    "title": "Administration",
+    "dashboard": "Dashboard",
+    "teams": "Teams",
+    "products": "Products",
+    "orders": "Orders"
+  }
+}
