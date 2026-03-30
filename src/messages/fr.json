@@ -51,7 +51,15 @@
     "addToCart": "Ajouter au panier",
     "price": "{price} TND",
     "checkout": "Commander",
-    "loginToBuy": "Connectez-vous pour acheter"
+    "loginToBuy": "Connectez-vous pour acheter",
+    "searchPlaceholder": "Rechercher un produit…",
+    "searchButton": "Rechercher",
+    "searchLabel": "Recherche",
+    "filterSportAll": "Tous les sports",
+    "filterMerchTypeAll": "Tous les types",
+    "sizeLabel": "Taille",
+    "noSize": "Sans taille",
+    "chooseSize": "Veuillez choisir une taille."
   },
   "auth": {
     "signInTitle": "Connexion",

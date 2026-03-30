@@ -33,6 +33,7 @@ export async function POST() {
           productId: i.productId,
           quantity: i.quantity,
           priceCents: i.product.priceCents,
+          sizeOption: i.sizeOption ?? "",
         })),
       },
     },

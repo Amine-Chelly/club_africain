@@ -39,12 +39,17 @@ export async function POST() {
   for (const item of guestCart.items) {
     await prisma.cartItem.upsert({
       where: {
-        cartId_productId: { cartId: userCart.id, productId: item.productId },
+        cartId_productId_sizeOption: {
+          cartId: userCart.id,
+          productId: item.productId,
+          sizeOption: item.sizeOption ?? "",
+        },
       },
       create: {
         cartId: userCart.id,
         productId: item.productId,
         quantity: item.quantity,
+        sizeOption: item.sizeOption ?? "",
       },
       update: {
         quantity: { increment: item.quantity },

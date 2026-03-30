@@ -51,7 +51,15 @@
     "addToCart": "Add to cart",
     "price": "{price} TND",
     "checkout": "Checkout",
-    "loginToBuy": "Sign in to purchase"
+    "loginToBuy": "Sign in to purchase",
+    "searchPlaceholder": "Search products…",
+    "searchButton": "Search",
+    "searchLabel": "Search",
+    "filterSportAll": "All sports",
+    "filterMerchTypeAll": "All merch types",
+    "sizeLabel": "Size",
+    "noSize": "No size",
+    "chooseSize": "Please choose a size."
   },
   "auth": {
     "signInTitle": "Sign in",

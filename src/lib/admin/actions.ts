@@ -10,6 +10,7 @@ import {
   AgeGroup,
   OrderStatus,
   Role,
+  MerchType,
   Sport,
   TeamCategory,
 } from "@/generated/prisma/enums";
@@ -73,12 +74,42 @@ function redirectAdmin(locale: string, path: string) {
 const teamSportValues = Object.values(Sport) as Sport[];
 const teamCategoryValues = Object.values(TeamCategory) as TeamCategory[];
 const ageGroupValues = Object.values(AgeGroup) as AgeGroup[];
+const merchTypeValues = Object.values(MerchType) as MerchType[];
+
+const sizeOptionsSchema = z
+  .string()
+  .optional()
+  .transform((s) => {
+    const raw = (s ?? "").trim();
+    if (!raw) return [];
+    return raw
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean)
+      .slice(0, 40);
+  });
+
+function computeProductCategory(merchType: MerchType, sport?: Sport | null) {
+  return sport ? `${sport}-${merchType}` : merchType;
+}
 
 const productCreateSchema = z.object({
   slug: slugSchema,
   name: z.string().trim().min(1).max(120),
   description: descriptionSchema,
-  category: z.string().trim().min(1).max(80),
+  merchType: z.enum(merchTypeValues as [MerchType, ...MerchType[]]),
+  sport: z.preprocess(
+    (v) => {
+      if (typeof v === "string") {
+        const s = v.trim();
+        return s === "" ? undefined : s;
+      }
+      return v;
+    },
+    z.enum(teamSportValues as [Sport, ...Sport[]]).optional()
+  ),
+  sizeOptions: sizeOptionsSchema,
+  category: z.string().trim().max(80).optional(),
   priceTnd: priceTndSchema,
   imageUrl: z.string().trim().max(2000).optional().or(z.literal("")).optional(),
   stock: stockSchema,
@@ -98,6 +129,9 @@ export async function createProductAction(formData: FormData) {
     slug: formData.get("slug"),
     name: formData.get("name"),
     description: formData.get("description"),
+    merchType: formData.get("merchType"),
+    sport: formData.get("sport"),
+    sizeOptions: formData.get("sizeOptions"),
     category: formData.get("category"),
     priceTnd: formData.get("priceTnd"),
     imageUrl: formData.get("imageUrl"),
@@ -105,16 +139,21 @@ export async function createProductAction(formData: FormData) {
     active: formData.get("active"),
   });
 
+  const category = parsed.category?.trim() ? parsed.category.trim() : computeProductCategory(parsed.merchType, parsed.sport);
+
   const created = await prisma.product.create({
     data: {
       slug: parsed.slug,
       name: parsed.name,
       description: parsed.description,
-      category: parsed.category,
+      category,
       priceCents: Math.round(parsed.priceTnd * 100),
       imageUrl: parsed.imageUrl ? parsed.imageUrl : null,
       stock: parsed.stock,
       active: parsed.active,
+      merchType: parsed.merchType,
+      sport: parsed.sport ?? undefined,
+      sizeOptions: parsed.sizeOptions,
     },
     select: { id: true },
   });
@@ -133,6 +172,9 @@ export async function updateProductAction(formData: FormData) {
     slug: formData.get("slug"),
     name: formData.get("name"),
     description: formData.get("description"),
+    merchType: formData.get("merchType"),
+    sport: formData.get("sport"),
+    sizeOptions: formData.get("sizeOptions"),
     category: formData.get("category"),
     priceTnd: formData.get("priceTnd"),
     imageUrl: formData.get("imageUrl"),
@@ -146,11 +188,14 @@ export async function updateProductAction(formData: FormData) {
       slug: parsed.slug,
       name: parsed.name,
       description: parsed.description,
-      category: parsed.category,
+      category: parsed.category?.trim() ? parsed.category.trim() : computeProductCategory(parsed.merchType, parsed.sport),
       priceCents: Math.round(parsed.priceTnd * 100),
       imageUrl: parsed.imageUrl ? parsed.imageUrl : null,
       stock: parsed.stock,
       active: parsed.active,
+      merchType: parsed.merchType,
+      sport: parsed.sport ?? undefined,
+      sizeOptions: parsed.sizeOptions,
     },
   });
 

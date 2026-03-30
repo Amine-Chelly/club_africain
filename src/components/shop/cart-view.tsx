@@ -9,11 +9,13 @@ import { Link } from "@/i18n/navigation";
 type Line = {
   id: string;
   quantity: number;
+  sizeOption: string;
   product: { slug: string; name: string; priceCents: number };
 };
 
 export function CartView({ checkoutLabel }: { checkoutLabel: string }) {
   const tNav = useTranslations("nav");
+  const tShop = useTranslations("shop");
   const locale = useLocale();
   const router = useRouter();
   const [items, setItems] = useState<Line[]>([]);
@@ -66,9 +68,20 @@ export function CartView({ checkoutLabel }: { checkoutLabel: string }) {
             <Link href={`/shop/${line.product.slug}`} className="text-foreground font-medium hover:underline">
               {line.product.name}
             </Link>
-            <span className="text-muted">
-              ×{line.quantity} · {formatTnd(line.quantity * line.product.priceCents)} TND
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              {line.sizeOption ? (
+                <span className="text-muted text-xs font-medium">
+                  {tShop("sizeLabel")}: {line.sizeOption}
+                </span>
+              ) : (
+                <span className="text-muted text-xs" aria-hidden>
+                  &nbsp;
+                </span>
+              )}
+              <span className="text-muted">
+                ×{line.quantity} · {formatTnd(line.quantity * line.product.priceCents)} TND
+              </span>
+            </div>
           </li>
         ))}
       </ul>

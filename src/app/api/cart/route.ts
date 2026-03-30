@@ -53,6 +53,7 @@ export async function GET() {
     items: cart.items.map((i) => ({
       id: i.id,
       quantity: i.quantity,
+      sizeOption: i.sizeOption,
       product: {
         id: i.product.id,
         slug: i.product.slug,
@@ -90,10 +91,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { productId, quantity } = parsed.data;
+  const { productId, quantity, sizeOption } = parsed.data;
+  const normalizedSize = sizeOption?.trim() ?? "";
 
   const product = await prisma.product.findFirst({
     where: { id: productId, active: true },
+    select: {
+      id: true,
+      priceCents: true,
+      stock: true,
+      sizeOptions: true,
+    },
   });
   if (!product || product.stock < quantity) {
     return NextResponse.json({ error: "Product unavailable" }, { status: 400 });
@@ -101,14 +109,27 @@ export async function POST(req: Request) {
 
   const { cart, sessionId } = await getOrCreateCart();
 
+  // If sizes are defined, only accept values from `sizeOptions`.
+  if (product.sizeOptions?.length) {
+    if (normalizedSize === "") return NextResponse.json({ error: "Size required" }, { status: 400 });
+    if (!product.sizeOptions.includes(normalizedSize)) {
+      return NextResponse.json({ error: "Invalid size" }, { status: 400 });
+    }
+  }
+
   await prisma.cartItem.upsert({
     where: {
-      cartId_productId: { cartId: cart.id, productId },
+      cartId_productId_sizeOption: {
+        cartId: cart.id,
+        productId,
+        sizeOption: normalizedSize,
+      },
     },
     create: {
       cartId: cart.id,
       productId,
       quantity,
+      sizeOption: normalizedSize,
     },
     update: {
       quantity: { increment: quantity },

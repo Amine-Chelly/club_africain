@@ -51,7 +51,15 @@
     "addToCart": "أضف للسلة",
     "price": "{price} د.ت",
     "checkout": "الدفع",
-    "loginToBuy": "سجّل الدخول للشراء"
+    "loginToBuy": "سجّل الدخول للشراء",
+    "searchPlaceholder": "ابحث عن منتج…",
+    "searchButton": "بحث",
+    "searchLabel": "بحث",
+    "filterSportAll": "كل الرياضات",
+    "filterMerchTypeAll": "كل الأنواع",
+    "sizeLabel": "الحجم",
+    "noSize": "بدون حجم",
+    "chooseSize": "يرجى اختيار الحجم."
   },
   "auth": {
     "signInTitle": "تسجيل الدخول",

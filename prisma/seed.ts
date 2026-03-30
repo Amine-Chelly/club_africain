@@ -1,7 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { AgeGroup, Role, Sport, TeamCategory } from "../src/generated/prisma/enums";
+import { AgeGroup, MerchType, Role, Sport, TeamCategory } from "../src/generated/prisma/enums";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 const url = process.env.DATABASE_URL;
@@ -118,6 +118,9 @@ async function main() {
       description: "Maillot officiel domicile (mock).",
       priceCents: 12000,
       category: "Maillots",
+      merchType: MerchType.JERSEY,
+      sport: Sport.FOOTBALL,
+      sizeOptions: ["XS", "S", "M", "L", "XL"],
       stock: 50,
     },
     {
@@ -126,6 +129,9 @@ async function main() {
       description: "Écharpe aux couleurs du club.",
       priceCents: 2500,
       category: "Accessoires",
+      merchType: MerchType.SCARF,
+      sport: Sport.OTHER,
+      sizeOptions: ["OS"],
       stock: 120,
     },
   ];
@@ -134,7 +140,14 @@ async function main() {
     await prisma.product.upsert({
       where: { slug: p.slug },
       create: { ...p, active: true },
-      update: { priceCents: p.priceCents, stock: p.stock, active: true },
+      update: {
+        priceCents: p.priceCents,
+        stock: p.stock,
+        active: true,
+        merchType: p.merchType,
+        sport: p.sport,
+        sizeOptions: p.sizeOptions,
+      },
     });
   }
 

@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { updateProductAction, deleteProductAction } from "@/lib/admin/actions";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { MerchType, Sport } from "@/generated/prisma/enums";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,9 @@ export default async function EditProductPage({ params }: Props) {
 
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) notFound();
+
+  const merchTypeValues = Object.values(MerchType) as MerchType[];
+  const sportValues = Object.values(Sport) as Sport[];
 
   return (
     <div>
@@ -86,10 +90,51 @@ export default async function EditProductPage({ params }: Props) {
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Catégorie</span>
+          <span>Type de merchandising</span>
+          <select
+            name="merchType"
+            required
+            defaultValue={product.merchType}
+            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+          >
+            {merchTypeValues.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span>Sport (optionnel)</span>
+          <select
+            name="sport"
+            defaultValue={product.sport ?? ""}
+            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+          >
+            <option value="">Aucun</option>
+            {sportValues.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span>Taille(s) (séparées par des virgules)</span>
+          <textarea
+            name="sizeOptions"
+            rows={3}
+            defaultValue={(product.sizeOptions ?? []).join(", ")}
+            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span>Catégorie (optionnel)</span>
           <input
             name="category"
-            required
             defaultValue={product.category}
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
           />

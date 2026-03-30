@@ -21,6 +21,15 @@ enum Sport {
   OTHER
 }
 
+enum MerchType {
+  JERSEY
+  SHORTS
+  SCARF
+  SOCKS
+  SWEATSHIRT
+  OTHER
+}
+
 enum TeamCategory {
   TEAM_SPORT
   INDIVIDUAL
@@ -74,15 +83,15 @@ model Team {
 }
 
 model Player {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   teamId      String
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  team        Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   name        String
   number      Int?
   position    String?
   nationality String?
-  appearances Int      @default(0)
-  goals       Int      @default(0)
+  appearances Int     @default(0)
+  goals       Int     @default(0)
 }
 
 model Staff {
@@ -94,17 +103,17 @@ model Staff {
 }
 
 model Fixture {
-  id           String   @id @default(cuid())
-  teamId       String
-  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  kickoffAt    DateTime
-  opponent     String
-  venue        String
-  isHome       Boolean  @default(true)
-  homeScore    Int?
-  awayScore    Int?
-  competition  String
-  status       String   @default("SCHEDULED")
+  id          String   @id @default(cuid())
+  teamId      String
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  kickoffAt   DateTime
+  opponent    String
+  venue       String
+  isHome      Boolean  @default(true)
+  homeScore   Int?
+  awayScore   Int?
+  competition String
+  status      String   @default("SCHEDULED")
 }
 
 model Product {
@@ -114,6 +123,9 @@ model Product {
   description String
   priceCents  Int
   category    String
+  merchType   MerchType   @default(OTHER)
+  sport       Sport?
+  sizeOptions String[]    @default([])
   imageUrl    String?
   stock       Int         @default(0)
   active      Boolean     @default(true)
@@ -133,14 +145,18 @@ model Cart {
 }
 
 model CartItem {
-  id        String  @id @default(cuid())
-  cartId    String
-  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int     @default(1)
+  id         String  @id @default(cuid())
+  cartId     String
+  cart       Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int     @default(1)
+  /**
+   * Selected size at add-to-cart time. Empty string = "no size".
+   */
+  sizeOption String  @default("")
 
-  @@unique([cartId, productId])
+  @@unique([cartId, productId, sizeOption])
 }
 
 model Order {
@@ -163,6 +179,7 @@ model OrderItem {
   product    Product @relation(fields: [productId], references: [id])
   quantity   Int
   priceCents Int
+  sizeOption String  @default("")
 }
 
 model NewsletterSubscriber {
