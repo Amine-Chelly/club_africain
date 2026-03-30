@@ -83,6 +83,8 @@
     "teams": "Équipes",
     "products": "Produits",
     "orders": "Commandes",
-    "newsletters": "Newsletters"
+    "newsletters": "Newsletters",
+    "matchdays": "Journées",
+    "fixtures": "Matchs"
   }
 }

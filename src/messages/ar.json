@@ -83,6 +83,8 @@
     "teams": "الفرق",
     "products": "المنتجات",
     "orders": "الطلبات",
-    "newsletters": "النشرات"
+    "newsletters": "النشرات",
+    "matchdays": "الجولات",
+    "fixtures": "المباريات"
   }
 }

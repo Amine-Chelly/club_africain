@@ -7,11 +7,12 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const t = await getTranslations("admin");
-  const [teams, products, orderCount, newsletterCount, orders] = await Promise.all([
+  const [teams, products, orderCount, newsletterCount, matchdayCount, orders] = await Promise.all([
     prisma.team.count(),
     prisma.product.count(),
     prisma.order.count(),
     prisma.newsletterSubscriber.count(),
+    prisma.matchday.count(),
     prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 10, include: { user: true } }),
   ]);
 
@@ -52,6 +53,17 @@ export default async function AdminDashboardPage() {
             className="text-primary mt-2 inline-block text-sm underline"
           >
             Gérer la newsletter
+          </Link>
+        </div>
+
+        <div className="border-border bg-card rounded-xl border p-4">
+          <p className="text-muted text-sm">{t("matchdays")}</p>
+          <p className="text-foreground text-2xl font-bold">{matchdayCount}</p>
+          <Link
+            href="/admin/matchdays"
+            className="text-primary mt-2 inline-block text-sm underline"
+          >
+            Gérer les journées
           </Link>
         </div>
       </div>

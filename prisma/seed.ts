@@ -50,6 +50,12 @@ async function main() {
     update: {},
   });
 
+  const footballSeniorMatchday = await prisma.matchday.upsert({
+    where: { label_season_sport: { label: "Journée 1", season: "2025/2026", sport: Sport.FOOTBALL } },
+    create: { label: "Journée 1", season: "2025/2026", sport: Sport.FOOTBALL },
+    update: {},
+  });
+
   await prisma.player.deleteMany({ where: { teamId: footballSenior.id } });
   await prisma.player.createMany({
     data: [
@@ -90,6 +96,7 @@ async function main() {
     data: [
       {
         teamId: footballSenior.id,
+        matchdayId: footballSeniorMatchday.id,
         kickoffAt: nextMonth,
         opponent: "Adversaire SC",
         venue: "Stade El Menzah",
@@ -99,6 +106,7 @@ async function main() {
       },
       {
         teamId: footballSenior.id,
+        matchdayId: footballSeniorMatchday.id,
         kickoffAt: new Date(Date.now() - 86400000 * 7),
         opponent: "Rival FC",
         venue: "Extérieur",

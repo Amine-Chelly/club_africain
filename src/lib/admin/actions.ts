@@ -232,6 +232,236 @@ export async function deleteNewsletterSubscriberAction(formData: FormData) {
   redirectAdmin(locale, "/admin/newsletters");
 }
 
+const matchdaySportSchema = z.preprocess(
+  (v) => {
+    if (typeof v === "string") {
+      const s = v.trim();
+      return s === "" ? undefined : s;
+    }
+    return v;
+  },
+  z.enum(teamSportValues as [Sport, ...Sport[]]).optional()
+);
+
+const matchdayCreateSchema = z.object({
+  label: z.string().trim().min(1).max(120),
+  season: z.preprocess(
+    (v) => {
+      if (typeof v === "string") {
+        const s = v.trim();
+        return s === "" ? undefined : s;
+      }
+      return v;
+    },
+    z.string().max(40).optional()
+  ),
+  sport: matchdaySportSchema,
+});
+
+const matchdayUpdateSchema = matchdayCreateSchema.extend({
+  id: z.string().min(1),
+});
+
+export async function createMatchdayAction(formData: FormData) {
+  "use server";
+  const locale = localeFromForm(formData);
+  const userId = await requireAdmin(locale);
+
+  const parsed = matchdayCreateSchema.parse({
+    label: formData.get("label"),
+    season: formData.get("season"),
+    sport: formData.get("sport"),
+  });
+
+  const created = await prisma.matchday.create({
+    data: {
+      label: parsed.label,
+      season: parsed.season ?? undefined,
+      sport: parsed.sport ?? undefined,
+    },
+    select: { id: true },
+  });
+
+  await audit("info", "admin.matchday.create", userId, { matchdayId: created.id });
+  redirectAdmin(locale, "/admin/matchdays");
+}
+
+export async function updateMatchdayAction(formData: FormData) {
+  "use server";
+  const locale = localeFromForm(formData);
+  const userId = await requireAdmin(locale);
+
+  const parsed = matchdayUpdateSchema.parse({
+    id: formData.get("id"),
+    label: formData.get("label"),
+    season: formData.get("season"),
+    sport: formData.get("sport"),
+  });
+
+  await prisma.matchday.update({
+    where: { id: parsed.id },
+    data: {
+      label: parsed.label,
+      season: parsed.season ?? undefined,
+      sport: parsed.sport ?? undefined,
+    },
+  });
+
+  await audit("info", "admin.matchday.update", userId, { matchdayId: parsed.id });
+  redirectAdmin(locale, `/admin/matchdays/${parsed.id}`);
+}
+
+export async function deleteMatchdayAction(formData: FormData) {
+  "use server";
+  const locale = localeFromForm(formData);
+  const userId = await requireAdmin(locale);
+
+  const id = z.string().min(1).parse(formData.get("id"));
+
+  await prisma.matchday.delete({ where: { id } });
+  await audit("warn", "admin.matchday.delete", userId, { matchdayId: id });
+  redirectAdmin(locale, "/admin/matchdays");
+}
+
+const checkboxBoolSchema = z
+  .string()
+  .optional()
+  .transform((v) => (v === "on" ? true : false));
+
+const optionalScoreSchema = z.preprocess(
+  (v) => {
+    if (v === null || v === undefined) return undefined;
+    if (typeof v === "string") {
+      const s = v.trim();
+      if (s === "") return undefined;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : undefined;
+    }
+    return v;
+  },
+  z.number().int().min(0).max(1000).optional()
+);
+
+const fixtureCreateSchema = z.object({
+  matchdayId: z.string().min(1),
+  teamId: z.string().min(1),
+  kickoffAt: z.coerce.date(),
+  opponent: z.string().trim().min(1).max(140),
+  venue: z.string().trim().min(1).max(200),
+  isHome: checkboxBoolSchema,
+  homeScore: optionalScoreSchema,
+  awayScore: optionalScoreSchema,
+  competition: z.string().trim().min(1).max(120),
+  status: z.preprocess(
+    (v) => {
+      if (typeof v === "string") {
+        const s = v.trim();
+        return s === "" ? undefined : s;
+      }
+      return v;
+    },
+    z.string().max(40).optional()
+  ),
+});
+
+const fixtureUpdateSchema = fixtureCreateSchema.extend({
+  id: z.string().min(1),
+});
+
+export async function createFixtureAction(formData: FormData) {
+  "use server";
+  const locale = localeFromForm(formData);
+  const userId = await requireAdmin(locale);
+
+  const parsed = fixtureCreateSchema.parse({
+    matchdayId: formData.get("matchdayId"),
+    teamId: formData.get("teamId"),
+    kickoffAt: formData.get("kickoffAt"),
+    opponent: formData.get("opponent"),
+    venue: formData.get("venue"),
+    isHome: formData.get("isHome") ?? undefined,
+    homeScore: formData.get("homeScore"),
+    awayScore: formData.get("awayScore"),
+    competition: formData.get("competition"),
+    status: formData.get("status"),
+  });
+
+  await prisma.fixture.create({
+    data: {
+      matchdayId: parsed.matchdayId,
+      teamId: parsed.teamId,
+      kickoffAt: parsed.kickoffAt,
+      opponent: parsed.opponent,
+      venue: parsed.venue,
+      isHome: parsed.isHome,
+      homeScore: parsed.homeScore ?? undefined,
+      awayScore: parsed.awayScore ?? undefined,
+      competition: parsed.competition,
+      status: parsed.status ?? undefined,
+    },
+  });
+
+  await audit("info", "admin.fixture.create", userId, { matchdayId: parsed.matchdayId, teamId: parsed.teamId });
+  redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+}
+
+export async function updateFixtureAction(formData: FormData) {
+  "use server";
+  const locale = localeFromForm(formData);
+  const userId = await requireAdmin(locale);
+
+  const parsed = fixtureUpdateSchema.parse({
+    id: formData.get("id"),
+    matchdayId: formData.get("matchdayId"),
+    teamId: formData.get("teamId"),
+    kickoffAt: formData.get("kickoffAt"),
+    opponent: formData.get("opponent"),
+    venue: formData.get("venue"),
+    isHome: formData.get("isHome") ?? undefined,
+    homeScore: formData.get("homeScore"),
+    awayScore: formData.get("awayScore"),
+    competition: formData.get("competition"),
+    status: formData.get("status"),
+  });
+
+  await prisma.fixture.update({
+    where: { id: parsed.id },
+    data: {
+      matchdayId: parsed.matchdayId,
+      teamId: parsed.teamId,
+      kickoffAt: parsed.kickoffAt,
+      opponent: parsed.opponent,
+      venue: parsed.venue,
+      isHome: parsed.isHome,
+      homeScore: parsed.homeScore ?? undefined,
+      awayScore: parsed.awayScore ?? undefined,
+      competition: parsed.competition,
+      status: parsed.status ?? undefined,
+    },
+  });
+
+  await audit("info", "admin.fixture.update", userId, { matchdayId: parsed.matchdayId, fixtureId: parsed.id });
+  redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+}
+
+export async function deleteFixtureAction(formData: FormData) {
+  "use server";
+  const locale = localeFromForm(formData);
+  const userId = await requireAdmin(locale);
+
+  const parsed = z.object({
+    matchdayId: z.string().min(1),
+    id: z.string().min(1),
+  }).parse({
+    matchdayId: formData.get("matchdayId"),
+    id: formData.get("id"),
+  });
+
+  await prisma.fixture.delete({ where: { id: parsed.id } });
+  await audit("warn", "admin.fixture.delete", userId, { matchdayId: parsed.matchdayId, fixtureId: parsed.id });
+  redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+}
+
 const teamCreateSchema = z.object({
   slug: slugSchema,
   name: z.string().trim().min(1).max(140),

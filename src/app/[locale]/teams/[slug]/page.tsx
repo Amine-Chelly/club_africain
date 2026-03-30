@@ -15,7 +15,11 @@ export default async function TeamDetailPage({ params }: Props) {
     include: {
       players: { orderBy: { name: "asc" } },
       staff: { orderBy: { name: "asc" } },
-      fixtures: { orderBy: { kickoffAt: "desc" }, take: 8 },
+      fixtures: {
+        orderBy: { kickoffAt: "desc" },
+        take: 8,
+        include: { matchday: true },
+      },
     },
   });
 
@@ -63,6 +67,7 @@ export default async function TeamDetailPage({ params }: Props) {
             <li key={f.id} className="px-4 py-3 text-sm">
               <div className="flex flex-wrap justify-between gap-2">
                 <span>
+                  {f.matchday ? `${f.matchday.label} · ` : ""}
                   {f.isHome ? "vs" : "@"} {f.opponent}
                 </span>
                 <span className="text-muted">

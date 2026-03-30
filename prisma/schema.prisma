@@ -107,6 +107,8 @@ model Fixture {
   teamId      String
   team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   kickoffAt   DateTime
+  matchdayId  String?
+  matchday    Matchday? @relation(fields: [matchdayId], references: [id], onDelete: Cascade)
   opponent    String
   venue       String
   isHome      Boolean  @default(true)
@@ -114,6 +116,20 @@ model Fixture {
   awayScore   Int?
   competition String
   status      String   @default("SCHEDULED")
+}
+
+model Matchday {
+  id        String   @id @default(cuid())
+  label     String
+  season    String?
+  sport     Sport?
+  fixtures  Fixture[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sport])
+  @@index([season])
+  @@unique([label, season, sport])
 }
 
 model Product {
