@@ -20,7 +20,13 @@
     "title": "Club Africain",
     "subtitle": "Welcome: history, teams, store, and supporters.",
     "ctaClub": "Discover the club",
-    "ctaShop": "Shop"
+    "ctaShop": "Shop",
+    "newsletterTitle": "Join our newsletter",
+    "newsletterSubtitle": "Get club updates, match news, and exclusive merch announcements.",
+    "newsletterEmailPlaceholder": "Your email",
+    "newsletterCta": "Subscribe",
+    "newsletterSuccess": "Thanks! You’re subscribed successfully.",
+    "newsletterError": "Something went wrong. Please check the email and try again."
   },
   "footer": {
     "tagline": "النادي الإفريقي — Since 1920",
@@ -76,6 +82,7 @@
     "dashboard": "Dashboard",
     "teams": "Teams",
     "products": "Products",
-    "orders": "Orders"
+    "orders": "Orders",
+    "newsletters": "Newsletters"
   }
 }

@@ -22,6 +22,7 @@ export default async function AdminLayout({ children, params }: Props) {
     { href: "/admin/teams", label: t("teams") },
     { href: "/admin/products", label: t("products") },
     { href: "/admin/orders", label: t("orders") },
+    { href: "/admin/newsletters", label: t("newsletters") },
   ] as const;
 
   return (

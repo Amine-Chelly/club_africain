@@ -20,7 +20,13 @@
     "title": "النادي الإفريقي",
     "subtitle": "مرحبا: التاريخ، الفرق، المتجر والجماهير.",
     "ctaClub": "اكتشف النادي",
-    "ctaShop": "المتجر"
+    "ctaShop": "المتجر",
+    "newsletterTitle": "اشترك في النشرة الإخبارية",
+    "newsletterSubtitle": "تابع أخبار النادي، مبارياتنا وإعلانات الحصرية.",
+    "newsletterEmailPlaceholder": "بريدك الإلكتروني",
+    "newsletterCta": "اشترك",
+    "newsletterSuccess": "شكرًا! تم تأكيد اشتراكك.",
+    "newsletterError": "حدث خطأ. يرجى التحقق من البريد وإعادة المحاولة."
   },
   "footer": {
     "tagline": "النادي الإفريقي — منذ 1920",
@@ -76,6 +82,7 @@
     "dashboard": "لوحة التحكم",
     "teams": "الفرق",
     "products": "المنتجات",
-    "orders": "الطلبات"
+    "orders": "الطلبات",
+    "newsletters": "النشرات"
   }
 }

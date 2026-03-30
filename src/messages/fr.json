@@ -20,7 +20,13 @@
     "title": "Club Africain",
     "subtitle": "Bienvenue sur le site du club : histoire, équipes, boutique et supporters.",
     "ctaClub": "Découvrir le club",
-    "ctaShop": "Boutique"
+    "ctaShop": "Boutique",
+    "newsletterTitle": "Rejoignez notre newsletter",
+    "newsletterSubtitle": "Recevez les actus du club, les nouvelles matchs et les annonces exclusives.",
+    "newsletterEmailPlaceholder": "Votre email",
+    "newsletterCta": "S'inscrire",
+    "newsletterSuccess": "Merci ! Votre inscription est confirmée.",
+    "newsletterError": "Une erreur est survenue. Vérifiez l'email et réessayez."
   },
   "footer": {
     "tagline": "النادي الإفريقي — Depuis 1920",
@@ -76,6 +82,7 @@
     "dashboard": "Tableau de bord",
     "teams": "Équipes",
     "products": "Produits",
-    "orders": "Commandes"
+    "orders": "Commandes",
+    "newsletters": "Newsletters"
   }
 }

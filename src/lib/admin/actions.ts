@@ -214,6 +214,24 @@ export async function deleteProductAction(formData: FormData) {
   redirectAdmin(locale, "/admin/products");
 }
 
+const newsletterDeleteSchema = z.object({
+  id: z.string().min(1),
+});
+
+export async function deleteNewsletterSubscriberAction(formData: FormData) {
+  "use server";
+  const locale = localeFromForm(formData);
+  const userId = await requireAdmin(locale);
+
+  const parsed = newsletterDeleteSchema.parse({
+    id: formData.get("id"),
+  });
+
+  await prisma.newsletterSubscriber.delete({ where: { id: parsed.id } });
+  await audit("warn", "admin.newsletter.delete", userId, { subscriberId: parsed.id });
+  redirectAdmin(locale, "/admin/newsletters");
+}
+
 const teamCreateSchema = z.object({
   slug: slugSchema,
   name: z.string().trim().min(1).max(140),

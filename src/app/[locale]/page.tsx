@@ -1,5 +1,6 @@
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
+import { NewsletterSubscribe } from "@/components/newsletter-subscribe";
 
 export default async function HomePage() {
   const t = await getTranslations("home");
@@ -42,6 +43,8 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      <NewsletterSubscribe />
     </div>
   );
 }
