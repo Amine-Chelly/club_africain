@@ -158,6 +158,34 @@ export async function createProductAction(formData: FormData) {
     select: { id: true },
   });
 
+  // Create per-size stock rows so customers can select sizes immediately.
+  if (parsed.sizeOptions.length) {
+    const n = parsed.sizeOptions.length;
+    const perSize = Math.floor(parsed.stock / n);
+    let remainder = parsed.stock - perSize * n;
+    for (let idx = 0; idx < n; idx++) {
+      const size = parsed.sizeOptions[idx];
+      const stock = perSize + (remainder > 0 ? 1 : 0);
+      remainder = Math.max(0, remainder - 1);
+      await prisma.productSizeStock.upsert({
+        where: {
+          productId_sizeOption: {
+            productId: created.id,
+            sizeOption: size,
+          },
+        },
+        create: {
+          productId: created.id,
+          sizeOption: size,
+          stock,
+        },
+        update: {
+          stock,
+        },
+      });
+    }
+  }
+
   await audit("info", "admin.product.create", userId, { productId: created.id });
   redirectAdmin(locale, "/admin/products");
 }
@@ -182,6 +210,7 @@ export async function updateProductAction(formData: FormData) {
     active: formData.get("active"),
   });
 
+  // Apply main product fields.
   await prisma.product.update({
     where: { id: parsed.id },
     data: {
@@ -198,6 +227,103 @@ export async function updateProductAction(formData: FormData) {
       sizeOptions: parsed.sizeOptions,
     },
   });
+
+  // Ensure all sizes in `sizeOptions` have a stock row (default 0).
+  if (parsed.sizeOptions?.length) {
+    for (const size of parsed.sizeOptions) {
+      const existing = await prisma.productSizeStock.findUnique({
+        where: {
+          productId_sizeOption: {
+            productId: parsed.id,
+            sizeOption: size,
+          },
+        },
+      });
+      if (!existing) {
+        await prisma.productSizeStock.create({
+          data: {
+            productId: parsed.id,
+            sizeOption: size,
+            stock: 0,
+          },
+        });
+      }
+    }
+  }
+
+  // Apply per-size stock deltas, if any were submitted.
+  if (parsed.sizeOptions?.length) {
+    for (const size of parsed.sizeOptions) {
+      const rawDelta = formData.get(`sizeDelta_${size}`);
+      if (rawDelta === null || rawDelta === undefined || rawDelta === "") continue;
+      const delta = Number(rawDelta);
+      if (!Number.isFinite(delta) || delta === 0) continue;
+
+      const existing = await prisma.productSizeStock.findUnique({
+        where: {
+          productId_sizeOption: {
+            productId: parsed.id,
+            sizeOption: size,
+          },
+        },
+      });
+
+      const nextStock = Math.max(0, (existing?.stock ?? 0) + Math.trunc(delta));
+
+      if (!existing) {
+        await prisma.productSizeStock.create({
+          data: {
+            productId: parsed.id,
+            sizeOption: size,
+            stock: nextStock,
+          },
+        });
+      } else {
+        await prisma.productSizeStock.update({
+          where: { id: existing.id },
+          data: { stock: nextStock },
+        });
+      }
+    }
+  }
+
+  // Sync product gallery images (multi-image + cover).
+  const imageUrlsRaw = formData.get("imageUrls");
+  if (typeof imageUrlsRaw === "string" && imageUrlsRaw.trim() && imageUrlsRaw.trim() !== "[]") {
+    const coverUrlRaw = formData.get("coverUrl");
+    const coverUrl = typeof coverUrlRaw === "string" ? coverUrlRaw : "";
+
+    let urls: unknown;
+    try {
+      urls = JSON.parse(imageUrlsRaw) as unknown;
+    } catch {
+      urls = null;
+    }
+
+    const imageUrls = z
+      .array(z.string().trim().max(2000))
+      .max(20)
+      .parse(urls);
+
+    if (imageUrls.length > 0) {
+      const finalCoverUrl = imageUrls.includes(coverUrl) ? coverUrl : imageUrls[0];
+
+      await prisma.productImage.deleteMany({ where: { productId: parsed.id } });
+      await prisma.productImage.createMany({
+        data: imageUrls.map((url, idx) => ({
+          productId: parsed.id,
+          url,
+          sortOrder: idx,
+          isCover: url === finalCoverUrl,
+        })),
+      });
+
+      await prisma.product.update({
+        where: { id: parsed.id },
+        data: { imageUrl: finalCoverUrl },
+      });
+    }
+  }
 
   await audit("info", "admin.product.update", userId, { productId: parsed.id });
   redirectAdmin(locale, "/admin/products");
