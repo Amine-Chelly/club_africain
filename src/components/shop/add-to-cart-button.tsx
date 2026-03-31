@@ -7,26 +7,35 @@ export function AddToCartButton({
   productId,
   label,
   sizeOptions,
+  disabledSizes,
 }: {
   productId: string;
   label: string;
   sizeOptions?: string[];
+  disabledSizes?: string[];
 }) {
   const sizes = useMemo(() => sizeOptions ?? [], [sizeOptions]);
+  const disabled = useMemo(() => new Set(disabledSizes ?? []), [disabledSizes]);
   const t = useTranslations("shop");
-  const [selectedSize, setSelectedSize] = useState<string>(() => sizes[0] ?? "");
+  const [selectedSize, setSelectedSize] = useState<string>(() => {
+    const firstAvailable = sizes.find((s) => !disabled.has(s));
+    return firstAvailable ?? sizes[0] ?? "";
+  });
   const [status, setStatus] = useState<"idle" | "ok" | "err" | "size_err">("idle");
 
   useEffect(() => {
     if (!sizes.length) return;
-    if (!sizes.includes(selectedSize)) setSelectedSize(sizes[0]);
+    if (!sizes.includes(selectedSize) || disabled.has(selectedSize)) {
+      const firstAvailable = sizes.find((s) => !disabled.has(s));
+      setSelectedSize(firstAvailable ?? sizes[0]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sizes]);
+  }, [sizes, disabledSizes]);
 
   async function add() {
     setStatus("idle");
     const normalizedSize = sizes.length ? selectedSize : "";
-    if (sizes.length && !normalizedSize) {
+    if (sizes.length && (!normalizedSize || disabled.has(normalizedSize))) {
       setStatus("size_err");
       return;
     }
@@ -51,7 +60,7 @@ export function AddToCartButton({
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
           >
             {sizes.map((s) => (
-              <option key={s} value={s}>
+              <option key={s} value={s} disabled={disabled.has(s)}>
                 {s}
               </option>
             ))}

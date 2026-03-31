@@ -101,9 +101,15 @@ export async function POST(req: Request) {
       priceCents: true,
       stock: true,
       sizeOptions: true,
+      sizeStocks: {
+        select: {
+          sizeOption: true,
+          stock: true,
+        },
+      },
     },
   });
-  if (!product || product.stock < quantity) {
+  if (!product) {
     return NextResponse.json({ error: "Product unavailable" }, { status: 400 });
   }
 
@@ -114,6 +120,24 @@ export async function POST(req: Request) {
     if (normalizedSize === "") return NextResponse.json({ error: "Size required" }, { status: 400 });
     if (!product.sizeOptions.includes(normalizedSize)) {
       return NextResponse.json({ error: "Invalid size" }, { status: 400 });
+    }
+
+    // Per-size stock check: find the stock row for the requested size.
+    const sizeStock = product.sizeStocks.find((s) => s.sizeOption === normalizedSize);
+    const available = sizeStock?.stock ?? 0;
+
+    // Compute current quantity of this size in the cart so we don't exceed stock.
+    const existingLine = cart.items.find(
+      (i) => i.productId === productId && i.sizeOption === normalizedSize
+    );
+    const currentQty = existingLine?.quantity ?? 0;
+    if (currentQty + quantity > available) {
+      return NextResponse.json({ error: "Product unavailable" }, { status: 400 });
+    }
+  } else {
+    // No sizes: fall back to aggregate product stock.
+    if (product.stock < quantity) {
+      return NextResponse.json({ error: "Product unavailable" }, { status: 400 });
     }
   }
 

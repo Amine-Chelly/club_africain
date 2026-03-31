@@ -40,7 +40,7 @@ npm run db:seed
 
 Comptes seed (mot de passe admin surchargeable avec `SEED_ADMIN_PASSWORD`) :
 
-- **Admin** : `admin@club-africain.tn` / `ChangeMeAdmin123!` (par défaut)
+- **Admin** : `admin@club-africain.tn` / `admin` (par défaut)
 - **Fan** : `fan@example.com` / `Supporter123!`
 
 ## Développement

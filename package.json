@@ -10,6 +10,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",
     "test": "jest",
     "postinstall": "prisma generate",
+    "db:create": "powershell -ExecutionPolicy Bypass -File scripts/create-database.ps1",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",

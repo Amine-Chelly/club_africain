@@ -142,13 +142,45 @@ model Product {
   merchType   MerchType   @default(OTHER)
   sport       Sport?
   sizeOptions String[]    @default([])
-  imageUrl    String?
-  stock       Int         @default(0)
+  imageUrl    String?     // legacy single image; new images live in ProductImage
+  stock       Int         @default(0) // legacy aggregate stock; per-size stock lives in ProductSizeStock
   active      Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   orderItems  OrderItem[]
   cartItems   CartItem[]
+  sizeStocks  ProductSizeStock[]
+  images      ProductImage[]
+}
+
+model ProductSizeStock {
+  id         String  @id @default(cuid())
+  productId  String
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /**
+   * Size identifier; must be present in Product.sizeOptions for selectable sizes.
+   * Keep rows even when stock is 0 so admin can refill later.
+   */
+  sizeOption String
+  stock      Int     @default(0)
+
+  @@unique([productId, sizeOption])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  altText   String?
+  /**
+   * Lower sortOrder means earlier in galleries; cover image is the first by sortOrder.
+   */
+  sortOrder Int     @default(0)
+  isCover   Boolean @default(false)
+
+  @@index([productId, sortOrder])
+  @@unique([productId, sortOrder])
 }
 
 model Cart {

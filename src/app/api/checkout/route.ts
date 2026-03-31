@@ -23,23 +23,61 @@ export async function POST() {
 
   const totalCents = cart.items.reduce((s, i) => s + i.quantity * i.product.priceCents, 0);
 
-  const order = await prisma.order.create({
-    data: {
-      userId: session.user.id,
-      totalCents,
-      status: "PAID",
-      items: {
-        create: cart.items.map((i) => ({
-          productId: i.productId,
-          quantity: i.quantity,
-          priceCents: i.product.priceCents,
-          sizeOption: i.sizeOption ?? "",
-        })),
+  const [order] = await prisma.$transaction(async (tx) => {
+    // Create order + items.
+    const createdOrder = await tx.order.create({
+      data: {
+        userId: session.user.id,
+        totalCents,
+        status: "PAID",
+        items: {
+          create: cart.items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            priceCents: i.product.priceCents,
+            sizeOption: i.sizeOption ?? "",
+          })),
+        },
       },
-    },
-  });
+    });
 
-  await prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+    // Decrement stock per product/size.
+    for (const item of cart.items) {
+      const size = item.sizeOption ?? "";
+      if (size) {
+        const existing = await tx.productSizeStock.findUnique({
+          where: {
+            productId_sizeOption: {
+              productId: item.productId,
+              sizeOption: size,
+            },
+          },
+        });
+        if (existing) {
+          const next = Math.max(0, existing.stock - item.quantity);
+          await tx.productSizeStock.update({
+            where: { id: existing.id },
+            data: { stock: next },
+          });
+        }
+      } else {
+        // Fallback: decrement aggregate product stock when there is no size.
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
+          },
+        });
+      }
+    }
+
+    // Clear cart items.
+    await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
+
+    return [createdOrder];
+  });
 
   await prisma.auditLog.create({
     data: {

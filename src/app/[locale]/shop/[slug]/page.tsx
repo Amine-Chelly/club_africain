@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { formatTnd } from "@/lib/money";
 import { AddToCartButton } from "@/components/shop/add-to-cart-button";
+import { ProductImageGallery } from "@/components/shop/product-image-gallery";
 import { getTranslations } from "next-intl/server";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { MerchType, Sport } from "@/generated/prisma/enums";
 
@@ -50,21 +50,22 @@ export default async function ProductPage({ params }: Props) {
 
   const product = await prisma.product.findFirst({
     where: { slug, active: true },
+    include: {
+      sizeStocks: true,
+      images: {
+        orderBy: { sortOrder: "asc" },
+      },
+    },
   });
   if (!product) notFound();
 
   return (
     <div className="mx-auto grid w-full max-w-6xl flex-1 gap-10 px-4 py-12 sm:px-6 lg:grid-cols-2 lg:px-8">
       <div className="bg-secondary relative aspect-square overflow-hidden rounded-xl">
-        {product.imageUrl ? (
-          <Image
-            src={product.imageUrl}
-            alt={product.name}
-            fill
-            className="object-cover"
-            priority
-            sizes="(max-width:1024px) 100vw, 50vw"
-          />
+        {product.images.length > 0 ? (
+          <ProductImageGallery images={product.images.map((img) => ({ url: img.url, altText: img.altText, isCover: img.isCover }))} />
+        ) : product.imageUrl ? (
+          <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
         ) : (
           <div className="text-muted flex h-full items-center justify-center">{product.name}</div>
         )}
@@ -99,6 +100,10 @@ export default async function ProductPage({ params }: Props) {
             productId={product.id}
             label={t("addToCart")}
             sizeOptions={product.sizeOptions ?? []}
+            disabledSizes={(product.sizeOptions ?? []).filter((s) => {
+              const row = product.sizeStocks.find((ss) => ss.sizeOption === s);
+              return !row || row.stock <= 0;
+            })}
           />
           <p className="text-muted text-sm">{t("loginToBuy")}</p>
         </div>

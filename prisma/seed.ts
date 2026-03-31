@@ -12,7 +12,9 @@ if (!url) {
 const prisma = new PrismaClient({ adapter: new PrismaPg(url) });
 
 async function main() {
-  const adminPass = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMeAdmin123!";
+  // Default seeded admin password is intentionally simple for local development.
+  // Override via SEED_ADMIN_PASSWORD for anything non-local.
+  const adminPass = process.env.SEED_ADMIN_PASSWORD ?? "admin";
   const adminHash = await bcrypt.hash(adminPass, 12);
 
   await prisma.user.upsert({
@@ -145,7 +147,7 @@ async function main() {
   ];
 
   for (const p of products) {
-    await prisma.product.upsert({
+    const product = await prisma.product.upsert({
       where: { slug: p.slug },
       create: { ...p, active: true },
       update: {
@@ -155,6 +157,56 @@ async function main() {
         merchType: p.merchType,
         sport: p.sport,
         sizeOptions: p.sizeOptions,
+      },
+    });
+
+    // Seed per-size stock so inventory can be managed per size.
+    if (p.sizeOptions?.length) {
+      const perSize = Math.max(1, Math.floor(p.stock / p.sizeOptions.length));
+      for (const size of p.sizeOptions) {
+        await prisma.productSizeStock.upsert({
+          where: {
+            productId_sizeOption: {
+              productId: product.id,
+              sizeOption: size,
+            },
+          },
+          create: {
+            productId: product.id,
+            sizeOption: size,
+            stock: perSize,
+          },
+          update: {
+            stock: perSize,
+          },
+        });
+      }
+    }
+
+    // Seed a basic cover image per product; admin can replace later.
+    const placeholderUrl =
+      p.slug === "maillot-domicile"
+        ? "/branding/club-africain-kit-home.webp"
+        : "/branding/club-africain-scarf.webp";
+
+    await prisma.productImage.upsert({
+      where: {
+        productId_sortOrder: {
+          productId: product.id,
+          sortOrder: 0,
+        },
+      },
+      create: {
+        productId: product.id,
+        url: placeholderUrl,
+        sortOrder: 0,
+        isCover: true,
+        altText: p.name,
+      },
+      update: {
+        url: placeholderUrl,
+        isCover: true,
+        altText: p.name,
       },
     });
   }
