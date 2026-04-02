@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { Link } from "@/i18n/navigation";
 import { createMatchdayAction } from "@/lib/admin/actions";
 import { Sport } from "@/generated/prisma/enums";
+import { localizeSport } from "@/lib/db-visual-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -13,20 +14,43 @@ type Props = {
 export default async function NewMatchdayPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations("admin");
-  await auth(); // ensure cookies loaded; protection is handled in AdminLayout
+  await auth();
+  const ui =
+    locale === "fr"
+      ? {
+          back: "Retour",
+          label: "Libell\u00E9",
+          seasonOptional: "Saison (optionnel)",
+          sportOptional: "Sport (optionnel)",
+          none: "Aucun",
+          create: "Cr\u00E9er la journ\u00E9e",
+        }
+      : locale === "ar"
+        ? {
+            back: "\u0631\u062C\u0648\u0639",
+            label: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646",
+            seasonOptional: "\u0627\u0644\u0645\u0648\u0633\u0645 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)",
+            sportOptional: "\u0627\u0644\u0631\u064A\u0627\u0636\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)",
+            none: "\u0628\u062F\u0648\u0646",
+            create: "\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062C\u0648\u0644\u0629",
+          }
+        : {
+            back: "Back",
+            label: "Label",
+            seasonOptional: "Season (optional)",
+            sportOptional: "Sport (optional)",
+            none: "None",
+            create: "Create matchday",
+          };
 
   const sportValues = Object.values(Sport) as Sport[];
-  // Optional: could prefill sport from teams later, but keep it simple for MVP.
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-foreground text-3xl font-bold">{t("matchdays")}</h1>
-        <Link
-          href="/admin/matchdays"
-          className="text-muted text-sm underline"
-        >
-          Retour
+        <Link href="/admin/matchdays" className="text-muted text-sm underline">
+          {ui.back}
         </Link>
       </div>
 
@@ -34,17 +58,17 @@ export default async function NewMatchdayPage({ params }: Props) {
         <input type="hidden" name="locale" value={locale} />
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Libellé</span>
+          <span>{ui.label}</span>
           <input
             name="label"
             required
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-            placeholder="Ex: Journée 1"
+            placeholder="Ex: Matchday 1"
           />
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Saison (optionnel)</span>
+          <span>{ui.seasonOptional}</span>
           <input
             name="season"
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
@@ -53,16 +77,16 @@ export default async function NewMatchdayPage({ params }: Props) {
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Sport (optionnel)</span>
+          <span>{ui.sportOptional}</span>
           <select
             name="sport"
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
             defaultValue=""
           >
-            <option value="">Aucun</option>
-            {sportValues.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            <option value="">{ui.none}</option>
+            {sportValues.map((sport) => (
+              <option key={sport} value={sport}>
+                {localizeSport(sport, locale)}
               </option>
             ))}
           </select>
@@ -72,10 +96,9 @@ export default async function NewMatchdayPage({ params }: Props) {
           type="submit"
           className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
-          Créer la journée
+          {ui.create}
         </button>
       </form>
     </div>
   );
 }
-

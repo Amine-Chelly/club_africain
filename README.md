@@ -99,6 +99,15 @@ Conventions de commits : `feat:`, `fix:`, `refactor:` — branches `main` / `dev
 - **Jest** : `npm run test`
 - Workflow GitHub Actions : `.github/workflows/ci.yml` (lint, test, build avec Postgres de service)
 
+## Triple Language Policy (EN/FR/AR)
+
+- Toute nouvelle UI doit etre disponible en anglais, francais et arabe.
+- Ne pas ajouter de texte UI hardcode dans les pages/composants quand il doit etre traduit.
+- Garder les cles synchronisees entre `src/messages/en.json`, `src/messages/fr.json`, `src/messages/ar.json`.
+- Les valeurs en base ne changent pas pour la traduction (localisation visuelle uniquement).
+- `npm run lint` est obligatoire avant merge (ESLint + i18n parity + hardcoded-text guard).
+- Un echec de parite i18n ou de hardcoded-text guard est bloquant.
+
 ---
 
 Club Africain — النادي الإفريقي · Depuis 1920

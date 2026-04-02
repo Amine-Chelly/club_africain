@@ -53,23 +53,13 @@ export default async function NewProductPage({ params }: Props) {
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-1">
           <label className="flex flex-col gap-1 text-sm">
             <span>Prix (TND)</span>
             <input
               name="priceTnd"
               type="number"
               step="0.01"
-              required
-              className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span>Stock</span>
-            <input
-              name="stock"
-              type="number"
               required
               className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
             />

@@ -54,6 +54,27 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum TennisTournamentCategory {
+  ITF
+  ATP
+  WTA
+}
+
+enum TournamentTier {
+  GRAND_SLAM
+  STANDARD
+}
+
+enum AthleteGender {
+  MALE
+  FEMALE
+}
+
+enum TeamGender {
+  MALE
+  FEMALE
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -72,6 +93,7 @@ model Team {
   slug        String       @unique
   name        String
   sport       Sport
+  gender      TeamGender   @default(MALE)
   category    TeamCategory
   ageGroup    AgeGroup
   description String?
@@ -92,6 +114,12 @@ model Player {
   nationality String?
   appearances Int     @default(0)
   goals       Int     @default(0)
+  ranking     Int?
+  singlesRanking Int?
+  doublesRanking Int?
+  imageUrl    String?
+  gender      AthleteGender?
+  fixtures    Fixture[]
 }
 
 model Staff {
@@ -106,6 +134,8 @@ model Fixture {
   id          String   @id @default(cuid())
   teamId      String
   team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playerId    String?
+  player      Player?  @relation(fields: [playerId], references: [id], onDelete: SetNull)
   kickoffAt   DateTime
   matchdayId  String?
   matchday    Matchday? @relation(fields: [matchdayId], references: [id], onDelete: Cascade)
@@ -116,6 +146,10 @@ model Fixture {
   awayScore   Int?
   competition String
   status      String   @default("SCHEDULED")
+  tournamentCategory TennisTournamentCategory?
+  tournamentTier TournamentTier @default(STANDARD)
+
+  @@index([playerId])
 }
 
 model Matchday {

@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { MerchType, Sport } from "@/generated/prisma/enums";
 import { ProductImagesEditor } from "@/components/admin/product-images-editor";
+import { localizeMerchType, localizeSport } from "@/lib/db-visual-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function EditProductPage({ params }: Props) {
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-1">
           <label className="flex flex-col gap-1 text-sm">
             <span>Prix (TND)</span>
             <input
@@ -85,17 +86,6 @@ export default async function EditProductPage({ params }: Props) {
               className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
             />
           </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span>Stock total (indicatif)</span>
-          <input
-            name="stock"
-            type="number"
-            required
-            defaultValue={product.stock}
-            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-          />
-        </label>
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
@@ -108,7 +98,7 @@ export default async function EditProductPage({ params }: Props) {
           >
             {merchTypeValues.map((m) => (
               <option key={m} value={m}>
-                {m}
+                {localizeMerchType(m, locale)}
               </option>
             ))}
           </select>
@@ -124,7 +114,7 @@ export default async function EditProductPage({ params }: Props) {
             <option value="">Aucun</option>
             {sportValues.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {localizeSport(s, locale)}
               </option>
             ))}
           </select>
@@ -226,4 +216,3 @@ export default async function EditProductPage({ params }: Props) {
     </div>
   );
 }
-

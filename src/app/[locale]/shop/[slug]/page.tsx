@@ -4,49 +4,16 @@ import { AddToCartButton } from "@/components/shop/add-to-cart-button";
 import { ProductImageGallery } from "@/components/shop/product-image-gallery";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { MerchType, Sport } from "@/generated/prisma/enums";
+import { localizeMerchType, localizeSport, sizesWord } from "@/lib/db-visual-labels";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ slug: string }> };
-
-function labelSport(s: Sport) {
-  switch (s) {
-    case "FOOTBALL":
-      return "Football";
-    case "HANDBALL":
-      return "Handball";
-    case "BASKETBALL":
-      return "Basketball";
-    case "VOLLEYBALL":
-      return "Volleyball";
-    case "TENNIS":
-      return "Tennis";
-    default:
-      return "Other";
-  }
-}
-
-function labelMerchType(m: MerchType) {
-  switch (m) {
-    case "JERSEY":
-      return "Jersey";
-    case "SHORTS":
-      return "Shorts";
-    case "SCARF":
-      return "Scarf";
-    case "SOCKS":
-      return "Socks";
-    case "SWEATSHIRT":
-      return "Sweatshirt";
-    default:
-      return "Other";
-  }
-}
+type Props = { params: Promise<{ locale: string; slug: string }> };
 
 export default async function ProductPage({ params }: Props) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const t = await getTranslations("shop");
+  const sizesLabel = sizesWord(locale);
 
   const product = await prisma.product.findFirst({
     where: { slug, active: true },
@@ -73,16 +40,16 @@ export default async function ProductPage({ params }: Props) {
       <div>
         <div className="flex flex-wrap gap-2">
           <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">
-            {labelMerchType(product.merchType)}
+            {localizeMerchType(product.merchType, locale)}
           </span>
           {product.sport && (
             <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">
-              {labelSport(product.sport)}
+              {localizeSport(product.sport, locale)}
             </span>
           )}
           {product.sizeOptions?.length ? (
             <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">
-              {product.sizeOptions.length} sizes
+              {product.sizeOptions.length} {sizesLabel}
             </span>
           ) : (
             <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">

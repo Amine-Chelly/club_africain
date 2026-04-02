@@ -1,6 +1,7 @@
 import { createTeamAction } from "@/lib/admin/actions";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
+import { localizeAgeGroup, localizeSport, localizeTeamCategory, localizeTeamGender } from "@/lib/db-visual-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -8,47 +9,62 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
-const sportOptions = [
-  { value: "FOOTBALL", label: "Football" },
-  { value: "HANDBALL", label: "Handball" },
-  { value: "BASKETBALL", label: "Basketball" },
-  { value: "VOLLEYBALL", label: "Volleyball" },
-  { value: "TENNIS", label: "Tennis" },
-  { value: "OTHER", label: "Autre" },
-] as const;
-
-const categoryOptions = [
-  { value: "TEAM_SPORT", label: "Collectif" },
-  { value: "INDIVIDUAL", label: "Individuel" },
-] as const;
-
-const ageGroupOptions = [
-  { value: "U8", label: "U8" },
-  { value: "U11", label: "U11" },
-  { value: "U13", label: "U13" },
-  { value: "U15", label: "U15" },
-  { value: "U17", label: "U17" },
-  { value: "U19", label: "U19" },
-  { value: "U21", label: "U21" },
-  { value: "U23", label: "U23" },
-  { value: "SENIOR", label: "Senior" },
-] as const;
+const sportOptions = ["FOOTBALL", "HANDBALL", "BASKETBALL", "VOLLEYBALL", "TENNIS", "OTHER"] as const;
+const categoryOptions = ["TEAM_SPORT", "INDIVIDUAL"] as const;
+const genderOptions = ["MALE", "FEMALE"] as const;
+const ageGroupOptions = ["U8", "U11", "U13", "U15", "U17", "U19", "U21", "U23", "SENIOR"] as const;
 
 export default async function NewTeamPage({ params }: Props) {
   const { locale } = await params;
   const t = await getTranslations("admin");
-  await auth(); // AdminLayout handles protection; this just ensures cookies exist.
+  await auth();
+  const ui =
+    locale === "fr"
+      ? {
+          subtitle: "Créer une équipe",
+          slug: "Slug",
+          name: "Nom",
+          sport: "Sport",
+          category: "Catégorie",
+          sex: "Sexe",
+          age: "Tranche d'âge",
+          description: "Description (optionnelle)",
+          create: "Créer",
+        }
+      : locale === "ar"
+        ? {
+            subtitle: "إنشاء فريق",
+            slug: "المعرف",
+            name: "الاسم",
+            sport: "الرياضة",
+            category: "الفئة",
+            sex: "الجنس",
+            age: "الفئة العمرية",
+            description: "الوصف (اختياري)",
+            create: "إنشاء",
+          }
+        : {
+            subtitle: "Create a team",
+            slug: "Slug",
+            name: "Name",
+            sport: "Sport",
+            category: "Category",
+            sex: "Sex",
+            age: "Age group",
+            description: "Description (optional)",
+            create: "Create",
+          };
 
   return (
     <div>
       <h1 className="text-foreground text-3xl font-bold">{t("teams")}</h1>
-      <p className="text-muted mt-2">Créer une équipe</p>
+      <p className="text-muted mt-2">{ui.subtitle}</p>
 
       <form action={createTeamAction} method="post" className="mt-8 space-y-4">
         <input type="hidden" name="locale" value={locale} />
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Slug</span>
+          <span>{ui.slug}</span>
           <input
             name="slug"
             required
@@ -57,7 +73,7 @@ export default async function NewTeamPage({ params }: Props) {
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Nom</span>
+          <span>{ui.name}</span>
           <input
             name="name"
             required
@@ -65,32 +81,47 @@ export default async function NewTeamPage({ params }: Props) {
           />
         </label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span>Sport</span>
+            <span>{ui.sport}</span>
             <select
               name="sport"
               required
               className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
             >
               {sportOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
+                <option key={o} value={o}>
+                  {localizeSport(o, locale)}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span>Catégorie</span>
+            <span>{ui.category}</span>
             <select
               name="category"
               required
               className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
             >
               {categoryOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
+                <option key={o} value={o}>
+                  {localizeTeamCategory(o, locale)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span>{ui.sex}</span>
+            <select
+              name="gender"
+              required
+              className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+            >
+              {genderOptions.map((o) => (
+                <option key={o} value={o}>
+                  {localizeTeamGender(o, locale)}
                 </option>
               ))}
             </select>
@@ -98,22 +129,22 @@ export default async function NewTeamPage({ params }: Props) {
         </div>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Groupe d&apos;âge</span>
+          <span>{ui.age}</span>
           <select
             name="ageGroup"
             required
-            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+          className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
           >
             {ageGroupOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
+              <option key={o} value={o}>
+                {localizeAgeGroup(o, locale)}
               </option>
             ))}
           </select>
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Description (optionnel)</span>
+          <span>{ui.description}</span>
           <textarea
             name="description"
             rows={3}
@@ -125,10 +156,9 @@ export default async function NewTeamPage({ params }: Props) {
           type="submit"
           className="bg-primary text-primary-foreground hover:bg-primary-hover rounded-lg px-4 py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          Créer
+          {ui.create}
         </button>
       </form>
     </div>
   );
 }
-

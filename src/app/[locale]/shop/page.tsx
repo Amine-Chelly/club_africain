@@ -4,10 +4,12 @@ import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { MerchType, Sport } from "@/generated/prisma/enums";
+import { localizeMerchType, localizeSport, sizesWord } from "@/lib/db-visual-labels";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{
     q?: string;
     sport?: string;
@@ -15,42 +17,10 @@ type Props = {
   }>;
 };
 
-function labelSport(s: Sport) {
-  switch (s) {
-    case "FOOTBALL":
-      return "Football";
-    case "HANDBALL":
-      return "Handball";
-    case "BASKETBALL":
-      return "Basketball";
-    case "VOLLEYBALL":
-      return "Volleyball";
-    case "TENNIS":
-      return "Tennis";
-    default:
-      return "Other";
-  }
-}
-
-function labelMerchType(m: MerchType) {
-  switch (m) {
-    case "JERSEY":
-      return "Jersey";
-    case "SHORTS":
-      return "Shorts";
-    case "SCARF":
-      return "Scarf";
-    case "SOCKS":
-      return "Socks";
-    case "SWEATSHIRT":
-      return "Sweatshirt";
-    default:
-      return "Other";
-  }
-}
-
-export default async function ShopPage({ searchParams }: Props) {
+export default async function ShopPage({ params, searchParams }: Props) {
+  const { locale } = await params;
   const t = await getTranslations("shop");
+  const sizesLabel = sizesWord(locale);
   const sp = await searchParams;
 
   const q = (sp.q ?? "").trim();
@@ -110,7 +80,7 @@ export default async function ShopPage({ searchParams }: Props) {
             <option value="">{t("filterSportAll")}</option>
             {sports.map((s) => (
               <option key={s} value={s}>
-                {labelSport(s)}
+                {localizeSport(s, locale)}
               </option>
             ))}
           </select>
@@ -126,7 +96,7 @@ export default async function ShopPage({ searchParams }: Props) {
             <option value="">{t("filterMerchTypeAll")}</option>
             {merchTypes.map((m) => (
               <option key={m} value={m}>
-                {labelMerchType(m)}
+                {localizeMerchType(m, locale)}
               </option>
             ))}
           </select>
@@ -159,16 +129,16 @@ export default async function ShopPage({ searchParams }: Props) {
               <div className="p-4">
                 <div className="flex flex-wrap gap-2">
                   <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">
-                    {labelMerchType(p.merchType)}
+                    {localizeMerchType(p.merchType, locale)}
                   </span>
                   {p.sport && (
                     <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">
-                      {labelSport(p.sport)}
+                      {localizeSport(p.sport, locale)}
                     </span>
                   )}
                   {p.sizeOptions?.length ? (
                     <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">
-                      {p.sizeOptions.length} sizes
+                      {p.sizeOptions.length} {sizesLabel}
                     </span>
                   ) : (
                     <span className="text-muted text-xs border-border border rounded-full px-2 py-0.5">
