@@ -3,6 +3,7 @@ import { updatePlayerAction, deletePlayerAction } from "@/lib/admin/actions";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { getAthleteImageSrc } from "@/lib/athlete-images";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function EditPlayerPage({ params }: Props) {
 
         <div className="flex items-center gap-3">
           <Image
-            src={player.imageUrl ?? "/sports/tennis.avif"}
+            src={getAthleteImageSrc(player.gender)}
             alt={player.name}
             width={56}
             height={56}
@@ -137,7 +138,7 @@ export default async function EditPlayerPage({ params }: Props) {
             name="imageUrl"
             defaultValue={player.imageUrl ?? ""}
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-            placeholder="/players/placeholders/female.jpg"
+            placeholder="/players/placeholders/female.webp"
             maxLength={2000}
           />
         </label>

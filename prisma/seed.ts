@@ -12,6 +12,7 @@ import {
   TennisTournamentCategory,
 } from "../src/generated/prisma/enums";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { getAthleteImageSrc } from "../src/lib/athlete-images";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -142,9 +143,6 @@ const lastNames = [
 ];
 
 const nationalities = ["TN", "DZ", "MA", "EG", "CI", "SN", "FR", "LY"];
-const tennisPlaceholderMale = "/players/placeholders/male.webp";
-const tennisPlaceholderFemale = "/players/placeholders/female.jpg";
-
 const teamSeeds: TeamSeed[] = [
   {
     slug: "football-seniors",
@@ -748,12 +746,7 @@ function buildPlayers(team: TeamSeed, totalMetricFromFinishedFixtures: number): 
       goals: playerMetrics[index],
       singlesRanking: team.sport === Sport.TENNIS ? (team.ageGroup === AgeGroup.SENIOR ? 80 + index * 14 : 220 + index * 19) : undefined,
       doublesRanking: team.sport === Sport.TENNIS ? (team.ageGroup === AgeGroup.SENIOR ? 120 + index * 16 : 280 + index * 22) : undefined,
-      imageUrl:
-        team.sport === Sport.TENNIS
-          ? teamAthleteGender === AthleteGender.MALE
-            ? tennisPlaceholderMale
-            : tennisPlaceholderFemale
-          : undefined,
+      imageUrl: getAthleteImageSrc(teamAthleteGender),
       gender: teamAthleteGender,
     };
   });

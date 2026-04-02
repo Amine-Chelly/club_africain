@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { deletePlayerAction } from "@/lib/admin/actions";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { getAthleteImageSrc } from "@/lib/athlete-images";
 
 export const dynamic = "force-dynamic";
 
@@ -83,7 +84,7 @@ export default async function TeamPlayersPage({ params }: Props) {
                 <td className="border-border border-t px-3 py-3 align-top">
                   <div className="inline-flex items-center gap-2">
                     <Image
-                      src={p.imageUrl ?? "/sports/tennis.avif"}
+                      src={getAthleteImageSrc(p.gender)}
                       alt={p.name}
                       width={32}
                       height={32}

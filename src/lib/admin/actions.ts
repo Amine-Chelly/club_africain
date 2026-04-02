@@ -17,6 +17,7 @@ import {
   TennisTournamentCategory,
   TeamCategory,
 } from "@/generated/prisma/enums";
+import { getAthleteImageSrc } from "@/lib/athlete-images";
 
 const slugSchema = z
   .string()
@@ -932,7 +933,7 @@ export async function createPlayerAction(formData: FormData) {
       ranking: isTennis ? null : (parsed.ranking ?? null),
       singlesRanking: parsed.singlesRanking ?? null,
       doublesRanking: parsed.doublesRanking ?? null,
-      imageUrl: parsed.imageUrl ?? null,
+      imageUrl: getAthleteImageSrc(parsed.gender),
       gender: parsed.gender,
     },
   });
@@ -989,7 +990,7 @@ export async function updatePlayerAction(formData: FormData) {
       ranking: isTennis ? null : (parsed.ranking ?? null),
       singlesRanking: parsed.singlesRanking ?? null,
       doublesRanking: parsed.doublesRanking ?? null,
-      imageUrl: parsed.imageUrl ?? null,
+      imageUrl: getAthleteImageSrc(parsed.gender),
       gender: parsed.gender,
     },
   });

@@ -1,27 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { localizeSport, localizeTeamCategory, shortLabels } from "@/lib/db-visual-labels";
-import { getSportImageSrc } from "@/lib/sport-images";
+import { getAthleteImageSrc } from "@/lib/athlete-images";
 import { AthletesDirectory } from "@/components/athletes/athletes-directory";
 
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ locale: string }> };
-
-function getPlayerImage({
-  imageUrl,
-  gender,
-  sport,
-}: {
-  imageUrl: string | null;
-  gender: string | null;
-  sport: string;
-}) {
-  if (imageUrl) return imageUrl;
-  if (gender === "FEMALE") return "/players/placeholders/female.jpg";
-  if (gender === "MALE") return "/players/placeholders/male.webp";
-  return getSportImageSrc(sport);
-}
 
 function localizeSex(gender: string | null | undefined, tAthletes: Awaited<ReturnType<typeof getTranslations>>) {
   if (gender === "MALE") return tAthletes("sexMale");
@@ -60,11 +45,7 @@ export default async function AthletesPage({ params }: Props) {
     singlesRanking: player.singlesRanking,
     doublesRanking: player.doublesRanking,
     ranking: player.ranking,
-    imageSrc: getPlayerImage({
-      imageUrl: player.imageUrl,
-      gender: player.gender,
-      sport: player.team.sport,
-    }),
+    imageSrc: getAthleteImageSrc(player.gender),
   }));
 
   return (

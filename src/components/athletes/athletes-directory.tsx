@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import { Link } from "@/i18n/navigation";
 
 type AthleteItem = {
   id: string;
@@ -192,34 +193,36 @@ export function AthletesDirectory({ athletes, labels }: Props) {
 
       <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map((athlete) => (
-          <li key={athlete.id} className="border-border bg-card rounded-2xl border p-4">
-            <div className="flex items-start gap-3">
-              <Image
-                src={athlete.imageSrc}
-                alt={athlete.name}
-                width={56}
-                height={56}
-                className="h-14 w-14 rounded-full border border-border object-cover"
-              />
-              <div className="min-w-0">
-                <p className="text-foreground truncate font-semibold">{athlete.name}</p>
-                <p className="text-muted mt-1 text-sm">
-                  {athlete.sportLabel} - {athlete.teamName} - {athlete.categoryLabel}
-                </p>
-                <p className="text-muted mt-1 text-xs">
-                  {athlete.sport === "TENNIS" ? "-" : athlete.position}
-                  {athlete.number != null ? ` - #${athlete.number}` : ""}
-                </p>
-                <p className="text-muted mt-2 text-xs">
-                  {athlete.appearances} {labels.apps} - {athlete.goals} {labels.goals}
-                  {athlete.sport === "TENNIS"
-                    ? ` - ${labels.singlesRanking} ${athlete.singlesRanking != null ? `#${athlete.singlesRanking}` : "-"} - ${labels.doublesRanking} ${athlete.doublesRanking != null ? `#${athlete.doublesRanking}` : "-"}`
-                    : athlete.ranking != null
-                      ? ` - ${labels.ranking} #${athlete.ranking}`
-                      : ""}
-                </p>
+          <li key={athlete.id}>
+            <Link href={`/athletes/${athlete.id}`} className="border-border bg-card hover:border-primary/50 block rounded-2xl border p-4 transition-colors">
+              <div className="flex items-start gap-3">
+                <Image
+                  src={athlete.imageSrc}
+                  alt={athlete.name}
+                  width={56}
+                  height={56}
+                  className="h-14 w-14 rounded-full border border-border object-cover"
+                />
+                <div className="min-w-0">
+                  <p className="text-foreground truncate font-semibold">{athlete.name}</p>
+                  <p className="text-muted mt-1 text-sm">
+                    {athlete.sportLabel} - {athlete.teamName} - {athlete.categoryLabel}
+                  </p>
+                  <p className="text-muted mt-1 text-xs">
+                    {athlete.sport === "TENNIS" ? "-" : athlete.position}
+                    {athlete.number != null ? ` - #${athlete.number}` : ""}
+                  </p>
+                  <p className="text-muted mt-2 text-xs">
+                    {athlete.appearances} {labels.apps} - {athlete.goals} {labels.goals}
+                    {athlete.sport === "TENNIS"
+                      ? ` - ${labels.singlesRanking} ${athlete.singlesRanking != null ? `#${athlete.singlesRanking}` : "-"} - ${labels.doublesRanking} ${athlete.doublesRanking != null ? `#${athlete.doublesRanking}` : "-"}`
+                      : athlete.ranking != null
+                        ? ` - ${labels.ranking} #${athlete.ranking}`
+                        : ""}
+                  </p>
+                </div>
               </div>
-            </div>
+            </Link>
           </li>
         ))}
       </ul>

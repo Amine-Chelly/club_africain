@@ -12,7 +12,7 @@ type Props = {
 export default async function NewPlayerPage({ params }: Props) {
   const { locale, teamId } = await params;
   const t = await getTranslations("admin");
-  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { sport: true } });
+  const team = await prisma.team.findUnique({ where: { id: teamId }, select: { sport: true, gender: true } });
   if (!team) notFound();
   const isTennis = team.sport === "TENNIS";
   const labelSinglesRanking = "Singles ranking (optionnel)";
@@ -63,7 +63,7 @@ export default async function NewPlayerPage({ params }: Props) {
             <select
               name="gender"
               required
-              defaultValue="MALE"
+              defaultValue={team.gender}
               className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
             >
               <option value="MALE">Male</option>
