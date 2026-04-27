@@ -4,6 +4,9 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import {
   AgeGroup,
   AthleteGender,
+  OrderDeliveryType,
+  OrderPaymentType,
+  OrderStatus,
   MerchType,
   Role,
   Sport,
@@ -13,6 +16,7 @@ import {
 } from "../src/generated/prisma/enums";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { getAthleteImageSrc } from "../src/lib/athlete-images";
+import { buildAthleteName } from "../src/lib/athlete-names";
 
 const url = process.env.DATABASE_URL;
 if (!url) {
@@ -71,76 +75,6 @@ type TennisPlayerRef = {
   id: string;
   gender: AthleteGender | null;
 };
-
-const firstNames = [
-  "Aymen",
-  "Youssef",
-  "Bilel",
-  "Skander",
-  "Mohamed",
-  "Ali",
-  "Seif",
-  "Amine",
-  "Oussama",
-  "Hamza",
-  "Ghaith",
-  "Houssem",
-  "Nader",
-  "Anis",
-  "Rayen",
-  "Firas",
-  "Walid",
-  "Karim",
-  "Sami",
-  "Nassim",
-  "Mahdi",
-  "Montassar",
-  "Aziz",
-  "Issam",
-  "Rami",
-  "Saber",
-  "Ahmed",
-  "Tarek",
-  "Lotfi",
-  "Chaker",
-  "Marwen",
-  "Nael",
-];
-
-const lastNames = [
-  "Ben Salah",
-  "Trabelsi",
-  "Jlassi",
-  "Khalfallah",
-  "Gharbi",
-  "Cherni",
-  "Mabrouk",
-  "Ben Ali",
-  "Abid",
-  "Saidi",
-  "Mejri",
-  "Aouadi",
-  "Zouari",
-  "Brahmi",
-  "Hamdi",
-  "Dridi",
-  "Mhiri",
-  "Sassi",
-  "Mrad",
-  "Nefzi",
-  "Mokni",
-  "Tounsi",
-  "Kchaou",
-  "Kefi",
-  "Bousnina",
-  "Chikhaoui",
-  "Jedidi",
-  "Dhouib",
-  "Debbabi",
-  "Souissi",
-  "Baccar",
-  "Boukhris",
-];
 
 const nationalities = ["TN", "DZ", "MA", "EG", "CI", "SN", "FR", "LY"];
 const teamSeeds: TeamSeed[] = [
@@ -653,10 +587,8 @@ const productSeeds: ProductSeed[] = [
   },
 ];
 
-function buildPlayerName(index: number, teamName: string) {
-  const first = firstNames[index % firstNames.length];
-  const last = lastNames[(index * 3 + teamName.length) % lastNames.length];
-  return `${first} ${last}`;
+function buildPlayerName(index: number, teamName: string, gender: "MALE" | "FEMALE") {
+  return buildAthleteName(index, gender, teamName);
 }
 
 function getRoleWeight(sport: Sport, position?: string) {
@@ -738,7 +670,7 @@ function buildPlayers(team: TeamSeed, totalMetricFromFinishedFixtures: number): 
     const teamAthleteGender = team.gender === "FEMALE" ? AthleteGender.FEMALE : AthleteGender.MALE;
 
     return {
-      name: buildPlayerName(index, team.name),
+      name: buildPlayerName(index, team.name, team.gender),
       number,
       position: team.sport === Sport.TENNIS ? undefined : position,
       nationality: nationalities[index % nationalities.length],
@@ -858,14 +790,17 @@ function buildFixtures(teamId: string, matchdayIds: string[], team: TeamSeed, te
             playerId: playerRef.id,
             matchdayId: matchdayIds[roundIndex % matchdayIds.length],
             kickoffAt,
-            opponent: `${firstNames[(tournamentIndex * 6 + roundIndex * 3 + playerIndex + 5) % firstNames.length]} ${
-              lastNames[(tournamentIndex * 7 + roundIndex * 5 + playerIndex + 9) % lastNames.length]
-            }`,
+            opponent: buildAthleteName(
+              tournamentIndex * 6 + roundIndex * 3 + playerIndex + 5,
+              isMale ? AthleteGender.MALE : AthleteGender.FEMALE,
+              tournament,
+            ),
             venue: tournament.includes("Junior") ? "Junior Tennis Center" : "Court Central Club Africain",
             isHome: true,
             homeScore,
             awayScore,
             competition: tournament,
+            tournamentName: tournament,
             status: finished ? "FINISHED" : "SCHEDULED",
             tournamentCategory,
             tournamentTier: grandSlam ? TournamentTier.GRAND_SLAM : TournamentTier.STANDARD,
@@ -1023,9 +958,60 @@ async function seedTeams() {
       })),
     });
 
-    await prisma.fixture.createMany({
-      data: fixtureRows,
-    });
+    if (teamSeed.sport === Sport.TENNIS) {
+      const tournamentMap = new Map(
+        fixtureRows.map((row) => {
+          const key = `${row.tournamentName}|${row.tournamentCategory}|${row.tournamentTier}`;
+          return [
+            key,
+            {
+              name: row.tournamentName,
+              sport: Sport.TENNIS,
+              category: row.tournamentCategory,
+              tier: row.tournamentTier,
+            },
+          ];
+        }),
+      );
+
+      if (tournamentMap.size > 0) {
+        await prisma.tournament.createMany({
+          data: Array.from(tournamentMap.values()),
+        });
+      }
+
+      const storedTournaments = await prisma.tournament.findMany({
+        where: {
+          sport: Sport.TENNIS,
+          name: { in: Array.from(new Set(fixtureRows.map((row) => row.tournamentName))) },
+        },
+        select: {
+          id: true,
+          name: true,
+          category: true,
+          tier: true,
+        },
+      });
+      const tournamentByKey = new Map(
+        storedTournaments.map((tournament) => [
+          `${tournament.name}|${tournament.category}|${tournament.tier}`,
+          tournament.id,
+        ]),
+      );
+
+      await prisma.fixture.createMany({
+        data: fixtureRows.map(({ tournamentName, tournamentCategory, tournamentTier, ...row }) => ({
+          ...row,
+          matchdayId: undefined,
+          tournamentId:
+            tournamentByKey.get(`${tournamentName}|${tournamentCategory}|${tournamentTier}`) ?? undefined,
+        })),
+      });
+    } else {
+      await prisma.fixture.createMany({
+        data: fixtureRows,
+      });
+    }
   }
 }
 
@@ -1077,10 +1063,88 @@ async function seedProducts() {
   }
 }
 
+async function seedOrders() {
+  const existingCount = await prisma.order.count();
+  if (existingCount >= 3) return;
+
+  const fan = await prisma.user.findUnique({
+    where: { email: "fan@example.com" },
+  });
+  if (!fan) return;
+
+  const products = await prisma.product.findMany({
+    where: { active: true },
+    orderBy: { createdAt: "asc" },
+    take: 4,
+  });
+  if (products.length < 2) return;
+
+  const now = new Date();
+  const samples = [
+    {
+      status: OrderStatus.PENDING,
+      paymentType: OrderPaymentType.CASH,
+      deliveryType: OrderDeliveryType.PICKUP,
+      validatedAt: null,
+      createdAt: new Date(now.getTime() - 1000 * 60 * 60 * 36),
+      items: [
+        { product: products[0], quantity: 1 },
+        { product: products[1], quantity: 2 },
+      ],
+    },
+    {
+      status: OrderStatus.PAID,
+      paymentType: OrderPaymentType.CARD,
+      deliveryType: OrderDeliveryType.DELIVERY,
+      validatedAt: new Date(now.getTime() - 1000 * 60 * 60 * 18),
+      createdAt: new Date(now.getTime() - 1000 * 60 * 60 * 20),
+      items: [
+        { product: products[1], quantity: 1 },
+      ],
+    },
+    {
+      status: OrderStatus.SHIPPED,
+      paymentType: OrderPaymentType.BANK_TRANSFER,
+      deliveryType: OrderDeliveryType.DELIVERY,
+      validatedAt: new Date(now.getTime() - 1000 * 60 * 60 * 8),
+      createdAt: new Date(now.getTime() - 1000 * 60 * 60 * 10),
+      items: [
+        { product: products[2] ?? products[0], quantity: 1 },
+        { product: products[3] ?? products[1], quantity: 1 },
+      ],
+    },
+  ];
+
+  const needed = Math.max(0, 3 - existingCount);
+  for (const sample of samples.slice(0, needed)) {
+    await prisma.order.create({
+      data: {
+        userId: fan.id,
+        status: sample.status,
+        paymentType: sample.paymentType,
+        deliveryType: sample.deliveryType,
+        validatedAt: sample.validatedAt ?? undefined,
+        totalCents: sample.items.reduce((sum, item) => sum + item.quantity * item.product.priceCents, 0),
+        createdAt: sample.createdAt,
+        updatedAt: sample.createdAt,
+        items: {
+          create: sample.items.map((item) => ({
+            productId: item.product.id,
+            quantity: item.quantity,
+            priceCents: item.product.priceCents,
+            sizeOption: "",
+          })),
+        },
+      },
+    });
+  }
+}
+
 async function main() {
   const adminPass = await seedUsers();
   await seedTeams();
   await seedProducts();
+  await seedOrders();
 
   console.log(
     `Seed OK. Users ready, ${teamSeeds.length} teams populated, ${productSeeds.length} products available. Admin: admin@club-africain.tn / ${adminPass}`,

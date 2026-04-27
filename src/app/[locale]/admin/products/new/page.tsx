@@ -22,7 +22,7 @@ export default async function NewProductPage({ params }: Props) {
       <h1 className="text-foreground text-3xl font-bold">{t("products")}</h1>
       <p className="text-muted mt-2">Créer un produit</p>
 
-      <form action={createProductAction} method="post" className="mt-8 space-y-4">
+      <form action={createProductAction} encType="multipart/form-data" className="mt-8 space-y-4">
         <input type="hidden" name="locale" value={locale} />
 
         <label className="flex flex-col gap-1 text-sm">
@@ -118,11 +118,12 @@ export default async function NewProductPage({ params }: Props) {
         </label>
 
         <label className="flex flex-col gap-1 text-sm">
-          <span>Image URL (optionnel)</span>
+          <span>Image (Upload)</span>
           <input
-            name="imageUrl"
+            type="file"
+            name="imageFile"
+            accept="image/*"
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-            placeholder="https://..."
           />
         </label>
 
@@ -141,4 +142,3 @@ export default async function NewProductPage({ params }: Props) {
     </div>
   );
 }
-

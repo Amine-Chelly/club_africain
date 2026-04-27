@@ -3,8 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { deleteFixtureAction, deleteMatchdayAction, updateMatchdayAction } from "@/lib/admin/actions";
-import { AgeGroup, Sport, TeamCategory } from "@/generated/prisma/enums";
+import { AgeGroup, Sport, TeamCategory, FixtureStatus } from "@/generated/prisma/enums";
 import { notFound } from "next/navigation";
+import { formatDateTime } from "@/lib/date-format";
 import {
   localizeAgeGroup,
   localizeFixtureStatus,
@@ -14,6 +15,8 @@ import {
   localizeTeamCategory,
 } from "@/lib/db-visual-labels";
 import { getSportImageSrc } from "@/lib/sport-images";
+import { AdminImageUrlField } from "@/components/admin/image-url-field";
+import { MatchdayTypeFields } from "@/components/admin/matchday-type-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +43,20 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
           label: "Libell\u00E9",
           seasonOptional: "Saison (optionnel)",
           sportOptional: "Sport (optionnel)",
+          type: "Type de l'\u00E9v\u00E9nement",
+          league: "Championnat",
+          cup: "Coupe",
+          tournament: "Tournoi (tennis)",
+          tournamentCategory: "Cat\u00E9gorie tournoi (optionnel)",
+          tournamentTier: "Niveau tournoi",
+          itf: "ITF",
+          atp: "ATP",
+          wta: "WTA",
+          standard: "Standard",
+          grandSlam: "Grand Chelem",
           none: "Aucun",
+          image: "Photo de la journ\u00E9e",
+          imageEmpty: "Aucune photo pour le moment.",
           save: "Enregistrer",
           deleteMatchday: "Supprimer cette journ\u00E9e",
           addFixture: "Ajouter un match",
@@ -69,7 +85,20 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
             label: "\u0627\u0644\u0639\u0646\u0648\u0627\u0646",
             seasonOptional: "\u0627\u0644\u0645\u0648\u0633\u0645 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)",
             sportOptional: "\u0627\u0644\u0631\u064A\u0627\u0636\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)",
+            type: "\u0646\u0648\u0639 \u0627\u0644\u062D\u062F\u062B",
+            league: "\u0628\u0637\u0648\u0644\u0629 \u0627\u0644\u062F\u0648\u0631\u064A",
+            cup: "\u0643\u0623\u0633",
+            tournament: "\u062F\u0648\u0631\u0629 (\u062A\u0646\u0633)",
+            tournamentCategory: "\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0628\u0637\u0648\u0644\u0629",
+            tournamentTier: "\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0628\u0637\u0648\u0644\u0629",
+            itf: "ITF",
+            atp: "ATP",
+            wta: "WTA",
+            standard: "\u0639\u0627\u062F\u064A",
+            grandSlam: "\u062C\u0631\u0627\u0646\u062F \u0633\u0644\u0627\u0645",
             none: "\u0628\u062F\u0648\u0646",
+            image: "\u0635\u0648\u0631\u0629 \u0627\u0644\u062C\u0648\u0644\u0629",
+            imageEmpty: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629 \u062D\u0627\u0644\u064A\u0627\u064B.",
             save: "\u062D\u0641\u0638",
             deleteMatchday: "\u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u062C\u0648\u0644\u0629",
             addFixture: "\u0625\u0636\u0627\u0641\u0629 \u0645\u0628\u0627\u0631\u0627\u0629",
@@ -97,7 +126,20 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
             label: "Label",
             seasonOptional: "Season (optional)",
             sportOptional: "Sport (optional)",
+            type: "Event type",
+            league: "League",
+            cup: "Cup",
+            tournament: "Tournament (tennis)",
+            tournamentCategory: "Tournament category (optional)",
+            tournamentTier: "Tournament tier",
+            itf: "ITF",
+            atp: "ATP",
+            wta: "WTA",
+            standard: "Standard",
+            grandSlam: "Grand Slam",
             none: "None",
+            image: "Matchday image",
+            imageEmpty: "No image set yet.",
             save: "Save",
             deleteMatchday: "Delete this matchday",
             addFixture: "Add fixture",
@@ -126,7 +168,7 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
   const ageGroupValues = Object.values(AgeGroup) as AgeGroup[];
   const selectedCategory = categoryValues.includes(sp.category as TeamCategory) ? (sp.category as TeamCategory) : "";
   const selectedAgeGroup = ageGroupValues.includes(sp.ageGroup as AgeGroup) ? (sp.ageGroup as AgeGroup) : "";
-  const selectedStatus = (sp.status ?? "").trim();
+  const selectedStatus = Object.values(FixtureStatus).includes(sp.status as FixtureStatus) ? (sp.status as FixtureStatus) : undefined;
 
   const matchday = await prisma.matchday.findUnique({
     where: { id: matchdayId },
@@ -184,7 +226,7 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
         <div>
           <h2 className="text-foreground text-xl font-semibold">{ui.editMatchday}</h2>
 
-          <form action={updateMatchdayAction} method="post" className="mt-4 space-y-4">
+          <form action={updateMatchdayAction} encType="multipart/form-data" className="mt-4 space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="id" value={matchday.id} />
 
@@ -207,21 +249,42 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
               />
             </label>
 
-            <label className="flex flex-col gap-1 text-sm">
-              <span>{ui.sportOptional}</span>
-              <select
-                name="sport"
-                defaultValue={matchday.sport ?? ""}
-                className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-              >
-                <option value="">{ui.none}</option>
-                {sportValues.map((s) => (
-                  <option key={s} value={s}>
-                    {localizeSport(s, locale)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <MatchdayTypeFields
+              sportLabel={ui.sportOptional}
+              typeLabel={ui.type}
+              tournamentCategoryLabel={ui.tournamentCategory}
+              tournamentTierLabel={ui.tournamentTier}
+              noneLabel={ui.none}
+              sports={sportValues.map((s) => ({ value: s, label: localizeSport(s, locale) }))}
+              types={[
+                { value: "LEAGUE", label: ui.league },
+                { value: "CUP", label: ui.cup },
+                { value: "TOURNAMENT", label: ui.tournament },
+              ]}
+              tennisCategories={[
+                { value: "ITF", label: ui.itf },
+                { value: "ATP", label: ui.atp },
+                { value: "WTA", label: ui.wta },
+              ]}
+              tournamentTiers={[
+                { value: "STANDARD", label: ui.standard },
+                { value: "GRAND_SLAM", label: ui.grandSlam },
+              ]}
+              defaultSport={matchday.sport ?? ""}
+              defaultType={matchday.type}
+              defaultTennisCategory={matchday.tennisCategory ?? ""}
+              defaultTournamentTier={matchday.tournamentTier ?? "STANDARD"}
+            />
+
+            <AdminImageUrlField
+              label={ui.image}
+              name="imageUrl"
+              defaultValue={matchday.imageUrl}
+              placeholder=""
+              emptyText={ui.imageEmpty}
+              previewAlt={`${matchday.label} image preview`}
+              helpText="Optional. Paste a local path or external image URL."
+            />
 
             <button
               type="submit"
@@ -231,7 +294,7 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
             </button>
           </form>
 
-          <form action={deleteMatchdayAction} method="post" className="mt-8">
+          <form action={deleteMatchdayAction} encType="multipart/form-data" className="mt-8">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="id" value={matchday.id} />
             <button
@@ -297,10 +360,10 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
               className="border-border bg-background rounded-md border px-3 py-2 text-sm focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
             >
               <option value="">{ui.allStatuses}</option>
-              <option value="SCHEDULED">{localizeFixtureStatus("SCHEDULED", locale)}</option>
-              <option value="FINISHED">{localizeFixtureStatus("FINISHED", locale)}</option>
-              <option value="CANCELLED">{localizeFixtureStatus("CANCELLED", locale)}</option>
-              <option value="POSTPONED">{localizeFixtureStatus("POSTPONED", locale)}</option>
+          <option value="SCHEDULED">{localizeFixtureStatus("SCHEDULED", locale)}</option>
+          <option value="LIVE">{localizeFixtureStatus("LIVE", locale)}</option>
+          <option value="FINISHED">{localizeFixtureStatus("FINISHED", locale)}</option>
+          <option value="CANCELED">{localizeFixtureStatus("CANCELED", locale)}</option>
             </select>
 
             <div className="flex items-center gap-3">
@@ -376,12 +439,12 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
                       ) : null}
                     </td>
                     <td className="border-border border-t px-3 py-3 align-top">
-                      <span className="text-muted">{new Date(fixture.kickoffAt).toLocaleString()}</span>
+                    <span className="text-muted">{formatDateTime(fixture.kickoffAt, locale)}</span>
                     </td>
                     <td className="border-border border-t px-3 py-3 align-top">
                       <span className="text-muted">{fixture.competition}</span>
-                      {fixture.tournamentCategory ? (
-                        <div className="text-muted text-xs mt-1">{localizeTournamentCategory(fixture.tournamentCategory, locale)}</div>
+                      {matchday.tennisCategory && matchday.type === "TOURNAMENT" ? (
+                        <div className="text-muted text-xs mt-1">{localizeTournamentCategory(matchday.tennisCategory, locale)}</div>
                       ) : null}
                       <div className="text-muted text-xs mt-1">{localizeFixtureStatus(fixture.status, locale)}</div>
                     </td>
@@ -390,7 +453,7 @@ export default async function MatchdayDetailPage({ params, searchParams }: Props
                         <Link href={`/admin/matchdays/${matchdayId}/fixtures/${fixture.id}/edit`} className="text-primary text-sm underline">
                           {ui.edit}
                         </Link>
-                        <form action={deleteFixtureAction} method="post" className="inline">
+                        <form action={deleteFixtureAction} encType="multipart/form-data" className="inline">
                           <input type="hidden" name="locale" value={locale} />
                           <input type="hidden" name="matchdayId" value={matchdayId} />
                           <input type="hidden" name="id" value={fixture.id} />

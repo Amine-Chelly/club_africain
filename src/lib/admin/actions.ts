@@ -1,10 +1,36 @@
 "use server";
 
+import { promises as fsPromises } from 'fs';
+import path from 'path';
+import { randomUUID } from 'crypto';
+
+function getFileExt(fileName) {
+  const idx = fileName.lastIndexOf('.');
+  if (idx === -1) return '';
+  const ext = fileName.slice(idx).toLowerCase();
+  return ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'].includes(ext) ? ext : '';
+}
+
+async function handleFileUpload(file, folder) {
+  if (!file || typeof file === 'string' || file.size === 0) return undefined;
+  const ext = getFileExt(file.name);
+  if (!ext) throw new Error('Format d\'image non supporté');
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const uploadsDir = path.join(process.cwd(), 'public', 'uploads', folder);
+  await fsPromises.mkdir(uploadsDir, { recursive: true });
+  const filename = `${randomUUID()}${ext}`;
+  await fsPromises.writeFile(path.join(uploadsDir, filename), bytes);
+  return `/uploads/${folder}/${filename}`;
+}
+
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { syncTeamPlayerStats } from "@/lib/player-stats";
+import { buildFixturePlayerEvents } from "@/lib/fixture-events";
 import type { InputJsonValue } from "@prisma/client/runtime/client";
 import {
   AgeGroup,
@@ -16,6 +42,7 @@ import {
   TournamentTier,
   TennisTournamentCategory,
   TeamCategory,
+  MatchdayType,
 } from "@/generated/prisma/enums";
 import { getAthleteImageSrc } from "@/lib/athlete-images";
 
@@ -36,11 +63,47 @@ const activeSchema = z
   .optional()
   .transform((v) => (v === "on" ? true : false));
 
+const optionalImageUrlSchema = z.preprocess(
+  (v) => {
+    if (v === null || v === undefined) return undefined;
+    const s = String(v).trim();
+    return s === "" ? undefined : s;
+  },
+  z.string().max(2000).optional()
+);
+
 const localeFromForm = (formData: FormData) => {
   const locale = formData.get("locale");
   if (!locale) throw new Error("Locale manquant");
-  return String(locale);
+  const value = String(locale);
+  if (value !== "en" && value !== "fr" && value !== "ar") {
+    throw new Error(`Locale invalide: ${value}`);
+  }
+  return value;
 };
+
+function parseFixturePlayerEntries(formData: FormData) {
+  const pIds = formData.getAll("playerStatPlayerId");
+  const counts = formData.getAll("playerStatCount");
+  const entries: Array<{ playerId: string; count: number }> = [];
+  
+  for (let i = 0; i < pIds.length; i++) {
+    const id = typeof pIds[i] === "string" ? (pIds[i] as string).trim() : "";
+    if (id) {
+      const val = counts[i];
+      let c = typeof val === "string" ? parseInt(val, 10) : 0;
+      if (isNaN(c) || c < 0) c = 0;
+      entries.push({ playerId: id, count: c });
+    }
+  }
+
+  const normalized = new Map<string, number>();
+  for (const entry of entries) {
+    normalized.set(entry.playerId, (normalized.get(entry.playerId) ?? 0) + entry.count);
+  }
+
+  return Array.from(normalized, ([playerId, count]) => ({ playerId, count }));
+}
 
 async function requireAdmin(locale: string) {
   const session = await auth();
@@ -71,8 +134,9 @@ async function audit(
   }
 }
 
-function redirectAdmin(locale: string, path: string) {
+function redirectAdmin(locale: string, path: string): never {
   redirect(`/${locale}${path}`);
+  throw new Error("unreachable");
 }
 
 const teamSportValues = Object.values(Sport) as Sport[];
@@ -80,6 +144,7 @@ const teamCategoryValues = Object.values(TeamCategory) as TeamCategory[];
 const teamGenderValues = ["MALE", "FEMALE"] as const;
 const ageGroupValues = Object.values(AgeGroup) as AgeGroup[];
 const merchTypeValues = Object.values(MerchType) as MerchType[];
+const fixtureStatusValues = ["SCHEDULED", "LIVE", "FINISHED", "CANCELED"] as const;
 
 const sizeOptionsSchema = z
   .string()
@@ -127,6 +192,9 @@ const productUpdateSchema = productCreateSchema.extend({
 
 export async function createProductAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'products');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -139,7 +207,7 @@ export async function createProductAction(formData: FormData) {
     sizeOptions: formData.get("sizeOptions"),
     category: formData.get("category"),
     priceTnd: formData.get("priceTnd"),
-    imageUrl: formData.get("imageUrl"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     stock: formData.get("stock"),
     active: formData.get("active"),
   });
@@ -192,11 +260,15 @@ export async function createProductAction(formData: FormData) {
   }
 
   await audit("info", "admin.product.create", userId, { productId: created.id });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/products");
 }
 
 export async function updateProductAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'products');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -210,7 +282,7 @@ export async function updateProductAction(formData: FormData) {
     sizeOptions: formData.get("sizeOptions"),
     category: formData.get("category"),
     priceTnd: formData.get("priceTnd"),
-    imageUrl: formData.get("imageUrl"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     stock: formData.get("stock"),
     active: formData.get("active"),
   });
@@ -356,6 +428,7 @@ export async function updateProductAction(formData: FormData) {
   }
 
   await audit("info", "admin.product.update", userId, { productId: parsed.id });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/products");
 }
 
@@ -367,6 +440,7 @@ export async function deleteProductAction(formData: FormData) {
 
   await prisma.product.delete({ where: { id } });
   await audit("warn", "admin.product.delete", userId, { productId: id });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/products");
 }
 
@@ -412,6 +486,24 @@ const matchdayCreateSchema = z.object({
     z.string().max(40).optional()
   ),
   sport: matchdaySportSchema,
+  type: z.enum(Object.values(MatchdayType) as [MatchdayType, ...MatchdayType[]]).default("LEAGUE"),
+  tennisCategory: z.preprocess(
+    (v) => {
+      if (typeof v !== "string") return undefined;
+      const s = v.trim().toUpperCase();
+      return s === "ITF" || s === "ATP" || s === "WTA" ? s : undefined;
+    },
+    z.string().optional()
+  ),
+  tournamentTier: z.preprocess(
+    (v) => {
+      if (typeof v !== "string") return undefined;
+      const s = v.trim().toUpperCase();
+      return s === "GRAND_SLAM" || s === "STANDARD" ? s : undefined;
+    },
+    z.string().optional()
+  ),
+  imageUrl: optionalImageUrlSchema,
 });
 
 const matchdayUpdateSchema = matchdayCreateSchema.extend({
@@ -420,6 +512,9 @@ const matchdayUpdateSchema = matchdayCreateSchema.extend({
 
 export async function createMatchdayAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'matchdays');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -427,6 +522,10 @@ export async function createMatchdayAction(formData: FormData) {
     label: formData.get("label"),
     season: formData.get("season"),
     sport: formData.get("sport"),
+    type: formData.get("type"),
+    tennisCategory: formData.get("tennisCategory"),
+    tournamentTier: formData.get("tournamentTier"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
   });
 
   const created = await prisma.matchday.create({
@@ -434,16 +533,24 @@ export async function createMatchdayAction(formData: FormData) {
       label: parsed.label,
       season: parsed.season ?? undefined,
       sport: parsed.sport ?? undefined,
+      type: parsed.type,
+      tennisCategory: parsed.type === "TOURNAMENT" ? (parsed.tennisCategory as TennisTournamentCategory | undefined) : undefined,
+      tournamentTier: parsed.type === "TOURNAMENT" ? (parsed.tournamentTier as TournamentTier | undefined) : undefined,
+      imageUrl: parsed.imageUrl ?? null,
     },
     select: { id: true },
   });
 
   await audit("info", "admin.matchday.create", userId, { matchdayId: created.id });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/matchdays");
 }
 
 export async function updateMatchdayAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'matchdays');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -452,6 +559,10 @@ export async function updateMatchdayAction(formData: FormData) {
     label: formData.get("label"),
     season: formData.get("season"),
     sport: formData.get("sport"),
+    type: formData.get("type"),
+    tennisCategory: formData.get("tennisCategory"),
+    tournamentTier: formData.get("tournamentTier"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
   });
 
   await prisma.matchday.update({
@@ -460,10 +571,15 @@ export async function updateMatchdayAction(formData: FormData) {
       label: parsed.label,
       season: parsed.season ?? undefined,
       sport: parsed.sport ?? undefined,
+      type: parsed.type,
+      tennisCategory: parsed.type === "TOURNAMENT" ? (parsed.tennisCategory as TennisTournamentCategory | undefined) : undefined,
+      tournamentTier: parsed.type === "TOURNAMENT" ? (parsed.tournamentTier as TournamentTier | undefined) : undefined,
+      imageUrl: parsed.imageUrl ?? null,
     },
   });
 
   await audit("info", "admin.matchday.update", userId, { matchdayId: parsed.id });
+  revalidatePath("/");
   redirectAdmin(locale, `/admin/matchdays/${parsed.id}`);
 }
 
@@ -476,6 +592,7 @@ export async function deleteMatchdayAction(formData: FormData) {
 
   await prisma.matchday.delete({ where: { id } });
   await audit("warn", "admin.matchday.delete", userId, { matchdayId: id });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/matchdays");
 }
 
@@ -516,6 +633,7 @@ const fixtureCreateSchema = z.object({
   homeScore: optionalScoreSchema,
   awayScore: optionalScoreSchema,
   competition: z.string().trim().min(1).max(120),
+  imageUrl: optionalImageUrlSchema,
   status: z.preprocess(
     (v) => {
       if (typeof v === "string") {
@@ -524,25 +642,7 @@ const fixtureCreateSchema = z.object({
       }
       return v;
     },
-    z.string().max(40).optional()
-  ),
-  tournamentCategory: z.preprocess(
-    (v) => {
-      if (typeof v === "string") {
-        const s = v.trim();
-        return s === "" ? undefined : s;
-      }
-      return v;
-    },
-    z.enum(Object.values(TennisTournamentCategory) as [TennisTournamentCategory, ...TennisTournamentCategory[]]).optional()
-  ),
-  tournamentTier: z.preprocess(
-    (v) => {
-      if (typeof v !== "string") return TournamentTier.STANDARD;
-      const s = v.trim();
-      return s === "" ? TournamentTier.STANDARD : s;
-    },
-    z.enum(Object.values(TournamentTier) as [TournamentTier, ...TournamentTier[]]).default(TournamentTier.STANDARD)
+    z.enum(fixtureStatusValues).default("SCHEDULED")
   ),
 });
 
@@ -578,8 +678,13 @@ function validateTennisScore(params: {
   return valid;
 }
 
+
+
 export async function createFixtureAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'fixtures');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -594,23 +699,33 @@ export async function createFixtureAction(formData: FormData) {
     homeScore: formData.get("homeScore"),
     awayScore: formData.get("awayScore"),
     competition: formData.get("competition"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     status: formData.get("status"),
-    tournamentCategory: formData.get("tournamentCategory"),
-    tournamentTier: formData.get("tournamentTier"),
   });
 
   const team = await prisma.team.findUnique({
     where: { id: parsed.teamId },
-    select: { sport: true },
+    select: { sport: true, category: true },
   });
   if (!team) {
     redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
   }
 
+  const matchday = await prisma.matchday.findUnique({
+    where: { id: parsed.matchdayId },
+    select: { sport: true, tennisCategory: true, tournamentTier: true },
+  });
+  if (matchday?.sport && matchday.sport !== team.sport) {
+    redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+  }
+
   let playerGender: string | null = null;
-  if (parsed.playerId) {
+  const playerEntries = parseFixturePlayerEntries(formData);
+  const derivedPlayerId = team!.category === "INDIVIDUAL" ? playerEntries[0]?.playerId : undefined;
+
+  if (derivedPlayerId) {
     const player = await prisma.player.findUnique({
-      where: { id: parsed.playerId },
+      where: { id: derivedPlayerId },
       select: { teamId: true, gender: true },
     });
     if (!player || player.teamId !== parsed.teamId) {
@@ -620,12 +735,15 @@ export async function createFixtureAction(formData: FormData) {
   }
 
   if (team!.sport === Sport.TENNIS) {
-    if (!parsed.playerId) {
+    if (!derivedPlayerId) {
+      redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+    }
+    if (!matchday?.tennisCategory) {
       redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
     }
     const allowBestOfFive =
-      parsed.tournamentTier === TournamentTier.GRAND_SLAM &&
-      parsed.tournamentCategory === TennisTournamentCategory.ATP &&
+      matchday.tournamentTier === TournamentTier.GRAND_SLAM &&
+      matchday.tennisCategory === TennisTournamentCategory.ATP &&
       playerGender === "MALE";
     const validTennisScore = validateTennisScore({
       homeScore: parsed.homeScore,
@@ -636,12 +754,24 @@ export async function createFixtureAction(formData: FormData) {
       redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
     }
   }
+  if (playerEntries.length > 0) {
+    const uniquePlayerIds = Array.from(new Set(playerEntries.map((stat) => stat.playerId)));
+    const teamPlayers = await prisma.player.findMany({
+      where: { id: { in: uniquePlayerIds }, teamId: parsed.teamId },
+      select: { id: true },
+    });
+    if (teamPlayers.length !== uniquePlayerIds.length) {
+      redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+    }
+  }
 
-  await prisma.fixture.create({
+  // Strict score contribution validation was removed to permit partial roster stats.
+
+  const createdFixture = await prisma.fixture.create({
     data: {
-      matchdayId: parsed.matchdayId,
       teamId: parsed.teamId,
-      playerId: parsed.playerId ?? undefined,
+      playerId: derivedPlayerId,
+      matchdayId: parsed.matchdayId,
       kickoffAt: parsed.kickoffAt,
       opponent: parsed.opponent,
       venue: parsed.venue,
@@ -649,18 +779,33 @@ export async function createFixtureAction(formData: FormData) {
       homeScore: parsed.homeScore ?? undefined,
       awayScore: parsed.awayScore ?? undefined,
       competition: parsed.competition,
+      imageUrl: parsed.imageUrl ?? null,
       status: parsed.status ?? undefined,
-      tournamentCategory: parsed.tournamentCategory ?? undefined,
-      tournamentTier: parsed.tournamentTier,
     },
   });
 
+  if (playerEntries.length > 0) {
+    await prisma.fixturePlayerEvent.createMany({
+      data: buildFixturePlayerEvents(playerEntries, team!.sport).map((event) => ({
+        fixtureId: createdFixture.id,
+        playerId: event.playerId,
+        type: event.type,
+      })),
+    });
+  }
+
+  await syncTeamPlayerStats(parsed.teamId);
+
   await audit("info", "admin.fixture.create", userId, { matchdayId: parsed.matchdayId, teamId: parsed.teamId });
+  revalidatePath("/");
   redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
 }
 
 export async function updateFixtureAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'fixtures');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -676,6 +821,7 @@ export async function updateFixtureAction(formData: FormData) {
     homeScore: formData.get("homeScore"),
     awayScore: formData.get("awayScore"),
     competition: formData.get("competition"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     status: formData.get("status"),
     tournamentCategory: formData.get("tournamentCategory"),
     tournamentTier: formData.get("tournamentTier"),
@@ -683,16 +829,27 @@ export async function updateFixtureAction(formData: FormData) {
 
   const team = await prisma.team.findUnique({
     where: { id: parsed.teamId },
-    select: { sport: true },
+    select: { sport: true, category: true },
   });
   if (!team) {
     redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
   }
 
+  const matchday = await prisma.matchday.findUnique({
+    where: { id: parsed.matchdayId },
+    select: { sport: true, tennisCategory: true, tournamentTier: true },
+  });
+  if (matchday?.sport && matchday.sport !== team.sport) {
+    redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+  }
+
   let playerGender: string | null = null;
-  if (parsed.playerId) {
+  const playerEntries = parseFixturePlayerEntries(formData);
+  const derivedPlayerId = team!.category === "INDIVIDUAL" ? playerEntries[0]?.playerId : undefined;
+
+  if (derivedPlayerId) {
     const player = await prisma.player.findUnique({
-      where: { id: parsed.playerId },
+      where: { id: derivedPlayerId },
       select: { teamId: true, gender: true },
     });
     if (!player || player.teamId !== parsed.teamId) {
@@ -702,12 +859,12 @@ export async function updateFixtureAction(formData: FormData) {
   }
 
   if (team!.sport === Sport.TENNIS) {
-    if (!parsed.playerId) {
+    if (!derivedPlayerId) {
       redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
     }
     const allowBestOfFive =
-      parsed.tournamentTier === TournamentTier.GRAND_SLAM &&
-      parsed.tournamentCategory === TennisTournamentCategory.ATP &&
+      matchday?.tournamentTier === TournamentTier.GRAND_SLAM &&
+      matchday?.tennisCategory === TennisTournamentCategory.ATP &&
       playerGender === "MALE";
     const validTennisScore = validateTennisScore({
       homeScore: parsed.homeScore,
@@ -719,12 +876,32 @@ export async function updateFixtureAction(formData: FormData) {
     }
   }
 
+  const existingFixture = await prisma.fixture.findUnique({
+    where: { id: parsed.id },
+    select: { teamId: true, team: { select: { sport: true } } },
+  });
+  if (!existingFixture) {
+    redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+  }
+  if (playerEntries.length > 0) {
+    const uniquePlayerIds = Array.from(new Set(playerEntries.map((stat) => stat.playerId)));
+    const teamPlayers = await prisma.player.findMany({
+      where: { id: { in: uniquePlayerIds }, teamId: parsed.teamId },
+      select: { id: true },
+    });
+    if (teamPlayers.length !== uniquePlayerIds.length) {
+      redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
+    }
+  }
+
+  // Strict score contribution validation was removed to permit partial roster stats.
+
   await prisma.fixture.update({
     where: { id: parsed.id },
     data: {
-      matchdayId: parsed.matchdayId,
       teamId: parsed.teamId,
-      playerId: parsed.playerId ?? null,
+      playerId: derivedPlayerId,
+      matchdayId: parsed.matchdayId,
       kickoffAt: parsed.kickoffAt,
       opponent: parsed.opponent,
       venue: parsed.venue,
@@ -732,13 +909,31 @@ export async function updateFixtureAction(formData: FormData) {
       homeScore: parsed.homeScore ?? undefined,
       awayScore: parsed.awayScore ?? undefined,
       competition: parsed.competition,
+      imageUrl: parsed.imageUrl ?? null,
       status: parsed.status ?? undefined,
-      tournamentCategory: parsed.tournamentCategory ?? undefined,
-      tournamentTier: parsed.tournamentTier,
     },
   });
 
+  await prisma.fixturePlayerEvent.deleteMany({ where: { fixtureId: parsed.id } });
+  if (playerEntries.length > 0) {
+    await prisma.fixturePlayerEvent.createMany({
+      data: buildFixturePlayerEvents(playerEntries, team!.sport).map((event) => ({
+        fixtureId: parsed.id,
+        playerId: event.playerId,
+        type: event.type,
+      })),
+    });
+  }
+
+
+
+  await syncTeamPlayerStats(existingFixture.teamId);
+  if (existingFixture.teamId !== parsed.teamId) {
+    await syncTeamPlayerStats(parsed.teamId);
+  }
+
   await audit("info", "admin.fixture.update", userId, { matchdayId: parsed.matchdayId, fixtureId: parsed.id });
+  revalidatePath("/");
   redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
 }
 
@@ -755,8 +950,18 @@ export async function deleteFixtureAction(formData: FormData) {
     id: formData.get("id"),
   });
 
+  const existingFixture = await prisma.fixture.findUnique({
+    where: { id: parsed.id },
+    select: { teamId: true },
+  });
+
   await prisma.fixture.delete({ where: { id: parsed.id } });
+
+  if (existingFixture) {
+    await syncTeamPlayerStats(existingFixture.teamId);
+  }
   await audit("warn", "admin.fixture.delete", userId, { matchdayId: parsed.matchdayId, fixtureId: parsed.id });
+  revalidatePath("/");
   redirectAdmin(locale, `/admin/matchdays/${parsed.matchdayId}`);
 }
 
@@ -767,6 +972,7 @@ const teamCreateSchema = z.object({
   gender: z.enum(teamGenderValues),
   category: z.enum(teamCategoryValues as [TeamCategory, ...TeamCategory[]]),
   ageGroup: z.enum(ageGroupValues as [AgeGroup, ...AgeGroup[]]),
+  imageUrl: optionalImageUrlSchema,
   description: z.string().trim().optional(),
 });
 
@@ -776,6 +982,9 @@ const teamUpdateSchema = teamCreateSchema.extend({
 
 export async function createTeamAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'teams');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -786,6 +995,7 @@ export async function createTeamAction(formData: FormData) {
     gender: formData.get("gender"),
     category: formData.get("category"),
     ageGroup: formData.get("ageGroup"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     description: formData.get("description"),
   });
 
@@ -797,16 +1007,21 @@ export async function createTeamAction(formData: FormData) {
       gender: parsed.gender,
       category: parsed.category,
       ageGroup: parsed.ageGroup,
+      imageUrl: parsed.imageUrl ?? null,
       description: parsed.description ? parsed.description : null,
     },
   });
 
   await audit("info", "admin.team.create", userId, { slug: parsed.slug });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/teams");
 }
 
 export async function updateTeamAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'teams');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -818,6 +1033,7 @@ export async function updateTeamAction(formData: FormData) {
     gender: formData.get("gender"),
     category: formData.get("category"),
     ageGroup: formData.get("ageGroup"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     description: formData.get("description"),
   });
 
@@ -830,11 +1046,13 @@ export async function updateTeamAction(formData: FormData) {
       gender: parsed.gender,
       category: parsed.category,
       ageGroup: parsed.ageGroup,
+      imageUrl: parsed.imageUrl ?? null,
       description: parsed.description ? parsed.description : null,
     },
   });
 
   await audit("info", "admin.team.update", userId, { teamId: parsed.id });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/teams");
 }
 
@@ -846,6 +1064,7 @@ export async function deleteTeamAction(formData: FormData) {
 
   await prisma.team.delete({ where: { id } });
   await audit("warn", "admin.team.delete", userId, { teamId: id });
+  revalidatePath("/");
   redirectAdmin(locale, "/admin/teams");
 }
 
@@ -886,6 +1105,7 @@ const playerCreateSchema = z.object({
       z.string().max(2000).optional()
     ),
   gender: z.enum(Object.values(AthleteGender) as [AthleteGender, ...AthleteGender[]]),
+  isActive: z.preprocess((v) => v === "true" || v === "on", z.boolean()).optional().default(true),
 });
 
 const playerUpdateSchema = playerCreateSchema.extend({
@@ -894,6 +1114,9 @@ const playerUpdateSchema = playerCreateSchema.extend({
 
 export async function createPlayerAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'players');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -908,8 +1131,9 @@ export async function createPlayerAction(formData: FormData) {
     ranking: formData.get("ranking"),
     singlesRanking: formData.get("singlesRanking"),
     doublesRanking: formData.get("doublesRanking"),
-    imageUrl: formData.get("imageUrl"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     gender: formData.get("gender"),
+    isActive: formData.get("isActive"),
   });
 
   const team = await prisma.team.findUnique({
@@ -932,18 +1156,24 @@ export async function createPlayerAction(formData: FormData) {
       goals: parsed.goals,
       ranking: isTennis ? null : (parsed.ranking ?? null),
       singlesRanking: parsed.singlesRanking ?? null,
-      doublesRanking: parsed.doublesRanking ?? null,
-      imageUrl: getAthleteImageSrc(parsed.gender),
+      imageUrl: parsed.imageUrl ?? getAthleteImageSrc(parsed.gender),
       gender: parsed.gender,
+      isActive: parsed.isActive,
     },
   });
 
+  await syncTeamPlayerStats(parsed.teamId);
+
   await audit("info", "admin.player.create", userId, { teamId: parsed.teamId });
+  revalidatePath("/");
   redirectAdmin(locale, `/admin/teams/${parsed.teamId}/players`);
 }
 
 export async function updatePlayerAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'players');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -959,8 +1189,9 @@ export async function updatePlayerAction(formData: FormData) {
     ranking: formData.get("ranking"),
     singlesRanking: formData.get("singlesRanking"),
     doublesRanking: formData.get("doublesRanking"),
-    imageUrl: formData.get("imageUrl"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
     gender: formData.get("gender"),
+    isActive: formData.get("isActive"),
   });
 
   const [existing, team] = await Promise.all([
@@ -990,12 +1221,16 @@ export async function updatePlayerAction(formData: FormData) {
       ranking: isTennis ? null : (parsed.ranking ?? null),
       singlesRanking: parsed.singlesRanking ?? null,
       doublesRanking: parsed.doublesRanking ?? null,
-      imageUrl: getAthleteImageSrc(parsed.gender),
+      imageUrl: parsed.imageUrl ?? getAthleteImageSrc(parsed.gender),
       gender: parsed.gender,
+      isActive: parsed.isActive,
     },
   });
 
+  await syncTeamPlayerStats(parsed.teamId);
+
   await audit("info", "admin.player.update", userId, { playerId: parsed.id });
+  revalidatePath("/");
   redirectAdmin(locale, `/admin/teams/${parsed.teamId}/players`);
 }
 
@@ -1011,6 +1246,7 @@ export async function deletePlayerAction(formData: FormData) {
 
   await prisma.player.delete({ where: { id } });
   await audit("warn", "admin.player.delete", userId, { playerId: id, teamId });
+  revalidatePath("/");
   redirectAdmin(locale, `/admin/teams/${teamId}/players`);
 }
 
@@ -1018,6 +1254,7 @@ const staffCreateSchema = z.object({
   teamId: z.string().min(1),
   name: z.string().trim().min(1).max(140),
   role: z.string().trim().min(1).max(120),
+  imageUrl: optionalImageUrlSchema,
 });
 
 const staffUpdateSchema = staffCreateSchema.extend({
@@ -1026,6 +1263,9 @@ const staffUpdateSchema = staffCreateSchema.extend({
 
 export async function createStaffAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'staff');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -1033,10 +1273,11 @@ export async function createStaffAction(formData: FormData) {
     teamId: formData.get("teamId"),
     name: formData.get("name"),
     role: formData.get("role"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
   });
 
   await prisma.staff.create({
-    data: { teamId: parsed.teamId, name: parsed.name, role: parsed.role },
+    data: { teamId: parsed.teamId, name: parsed.name, role: parsed.role, imageUrl: parsed.imageUrl ?? null },
   });
 
   await audit("info", "admin.staff.create", userId, { teamId: parsed.teamId });
@@ -1045,6 +1286,9 @@ export async function createStaffAction(formData: FormData) {
 
 export async function updateStaffAction(formData: FormData) {
   "use server";
+  const imageFile = formData.get("imageFile") as File | null;
+  const uploadedUrl = await handleFileUpload(imageFile, 'staff');
+  
   const locale = localeFromForm(formData);
   const userId = await requireAdmin(locale);
 
@@ -1053,6 +1297,7 @@ export async function updateStaffAction(formData: FormData) {
     teamId: formData.get("teamId"),
     name: formData.get("name"),
     role: formData.get("role"),
+    imageUrl: uploadedUrl ?? formData.get("imageUrl"),
   });
 
   const existing = await prisma.staff.findUnique({ where: { id: parsed.id } });
@@ -1062,7 +1307,7 @@ export async function updateStaffAction(formData: FormData) {
 
   await prisma.staff.update({
     where: { id: parsed.id },
-    data: { name: parsed.name, role: parsed.role },
+    data: { name: parsed.name, role: parsed.role, imageUrl: parsed.imageUrl ?? null },
   });
 
   await audit("info", "admin.staff.update", userId, { staffId: parsed.id });
@@ -1094,10 +1339,22 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   const orderId = z.string().min(1).parse(formData.get("orderId"));
   const status = orderStatusSchema.parse(formData.get("status"));
+  const existing = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: { validatedAt: true, status: true },
+  });
+  if (!existing) {
+    redirectAdmin(locale, "/admin/orders");
+  }
+
+  const shouldValidate = (status === OrderStatus.PAID || status === OrderStatus.SHIPPED) && !existing.validatedAt;
 
   await prisma.order.update({
     where: { id: orderId },
-    data: { status },
+    data: {
+      status,
+      validatedAt: shouldValidate ? new Date() : existing.validatedAt ?? undefined,
+    },
   });
 
   await audit("info", "admin.order.status.update", userId, { orderId, status });

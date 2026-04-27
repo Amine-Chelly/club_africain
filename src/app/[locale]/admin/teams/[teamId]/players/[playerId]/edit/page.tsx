@@ -28,7 +28,7 @@ export default async function EditPlayerPage({ params }: Props) {
     <div>
       <h1 className="text-foreground text-3xl font-bold">{t("teams")} - Modifier joueur</h1>
 
-      <form action={updatePlayerAction} method="post" className="mt-8 space-y-4">
+      <form action={updatePlayerAction} encType="multipart/form-data" className="mt-8 space-y-4">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="id" value={player.id} />
         <input type="hidden" name="teamId" value={teamId} />
@@ -73,6 +73,19 @@ export default async function EditPlayerPage({ params }: Props) {
               placeholder="TN"
               maxLength={3}
             />
+          </label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="flex items-center gap-2 text-sm mt-4">
+            <input
+              type="checkbox"
+              name="isActive"
+              value="true"
+              defaultChecked={player.isActive}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-ring focus:ring-2"
+            />
+            <span className="font-medium">{t("playerActive")}</span>
           </label>
         </div>
 
@@ -187,7 +200,7 @@ export default async function EditPlayerPage({ params }: Props) {
         </button>
       </form>
 
-      <form action={deletePlayerAction} method="post" className="mt-8">
+      <form action={deletePlayerAction} encType="multipart/form-data" className="mt-8">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="teamId" value={teamId} />
         <input type="hidden" name="id" value={player.id} />

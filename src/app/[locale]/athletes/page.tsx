@@ -14,6 +14,12 @@ function localizeSex(gender: string | null | undefined, tAthletes: Awaited<Retur
   return tAthletes("sexUnknown");
 }
 
+function getSportStatLabel(sport: string, tAthletes: Awaited<ReturnType<typeof getTranslations>>) {
+  if (sport === "TENNIS") return tAthletes("winsLabel");
+  if (sport === "HANDBALL" || sport === "BASKETBALL" || sport === "VOLLEYBALL") return tAthletes("pointsLabel");
+  return tAthletes("goalsLabel");
+}
+
 export default async function AthletesPage({ params }: Props) {
   const { locale } = await params;
   const [tAthletes, tTeams] = await Promise.all([getTranslations("athletes"), getTranslations("teams")]);
@@ -22,11 +28,14 @@ export default async function AthletesPage({ params }: Props) {
   const players = await prisma.player.findMany({
     include: {
       team: {
-        select: { id: true, name: true, sport: true, category: true },
+        select: { id: true, name: true, sport: true, category: true, gender: true },
       },
     },
     orderBy: [{ team: { sport: "asc" } }, { team: { name: "asc" } }, { name: "asc" }],
   });
+
+  const sexForPlayer = (playerGender: string | null | undefined, teamGender: string | null | undefined) =>
+    playerGender ?? teamGender ?? "MALE";
 
   const athletes = players.map((player) => ({
     id: player.id,
@@ -36,16 +45,17 @@ export default async function AthletesPage({ params }: Props) {
     sportLabel: localizeSport(player.team.sport, locale),
     category: player.team.category,
     categoryLabel: localizeTeamCategory(player.team.category, locale),
-    sex: player.gender ?? "UNKNOWN",
-    sexLabel: localizeSex(player.gender, tAthletes),
+    sex: sexForPlayer(player.gender, player.team.gender),
+    sexLabel: localizeSex(sexForPlayer(player.gender, player.team.gender), tAthletes),
     position: player.position ?? tTeams("unknownPosition"),
     number: player.number,
     appearances: player.appearances,
-    goals: player.goals,
+    sportStatLabel: getSportStatLabel(player.team.sport, tAthletes),
+    sportStatValue: player.goals,
     singlesRanking: player.singlesRanking,
     doublesRanking: player.doublesRanking,
     ranking: player.ranking,
-    imageSrc: getAthleteImageSrc(player.gender),
+    imageSrc: getAthleteImageSrc(sexForPlayer(player.gender, player.team.gender)),
   }));
 
   return (
@@ -66,12 +76,13 @@ export default async function AthletesPage({ params }: Props) {
           allCategories: tAthletes("allCategories"),
           allSports: tAthletes("allSports"),
           allSexes: tAthletes("allSexes"),
+          sexMale: tAthletes("sexMale"),
+          sexFemale: tAthletes("sexFemale"),
           empty: tAthletes("empty"),
           ranking: tAthletes("ranking"),
           singlesRanking: tAthletes("singlesRanking"),
           doublesRanking: tAthletes("doublesRanking"),
           apps: labels.apps,
-          goals: tTeams("summaryGoals"),
         }}
       />
     </div>

@@ -38,7 +38,11 @@ export function CartView({ checkoutLabel }: { checkoutLabel: string }) {
       router.push(`/${locale}/auth/signin?callbackUrl=/${locale}/shop/cart`);
       return;
     }
-    const data = (await res.json()) as { orderId?: string };
+    const data = (await res.json()) as { orderId?: string; checkoutUrl?: string };
+    if (data.checkoutUrl) {
+      window.location.href = data.checkoutUrl;
+      return;
+    }
     if (data.orderId) {
       router.push(`/${locale}/shop/checkout?orderId=${data.orderId}`);
       router.refresh();

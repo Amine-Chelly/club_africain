@@ -56,18 +56,25 @@ export function SignInForm() {
           className="border-border bg-background focus-visible:ring-ring rounded-md border px-3 py-2 focus-visible:outline-none focus-visible:ring-2"
         />
       </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span>{t("password")}</span>
-        <input
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border-border bg-background focus-visible:ring-ring rounded-md border px-3 py-2 focus-visible:outline-none focus-visible:ring-2"
-        />
-      </label>
+      <div className="flex items-center justify-between">
+        <label className="flex flex-col gap-1 text-sm flex-1">
+          <span>{t("password")}</span>
+          <input
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border-border bg-background focus-visible:ring-ring rounded-md border px-3 py-2 focus-visible:outline-none focus-visible:ring-2"
+          />
+        </label>
+      </div>
+      <div className="flex justify-end">
+        <Link href="/auth/forgot-password" className="text-primary text-xs font-medium underline">
+          {t("forgotPassword")}
+        </Link>
+      </div>
       <button
         type="submit"
         disabled={pending}

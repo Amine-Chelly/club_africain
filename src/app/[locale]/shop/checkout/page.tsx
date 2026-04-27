@@ -11,10 +11,10 @@ export default async function CheckoutPage({ searchParams }: Props) {
       <h1 className="text-foreground text-2xl font-bold">{t("checkout")}</h1>
       {orderId ? (
         <p className="text-muted mt-4">
-          Commande enregistrée (mock). Référence : <span className="text-foreground font-mono">{orderId}</span>
+          {t("orderPlaced")} <span className="text-foreground font-mono">{orderId}</span>
         </p>
       ) : (
-        <p className="text-muted mt-4">Aucune commande.</p>
+        <p className="text-muted mt-4">{t("noOrder")}</p>
       )}
     </div>
   );

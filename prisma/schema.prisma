@@ -54,6 +54,17 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum OrderPaymentType {
+  CASH
+  CARD
+  BANK_TRANSFER
+}
+
+enum OrderDeliveryType {
+  PICKUP
+  DELIVERY
+}
+
 enum TennisTournamentCategory {
   ITF
   ATP
@@ -75,6 +86,33 @@ enum TeamGender {
   FEMALE
 }
 
+enum FixturePlayerEventType {
+  APPEARANCE
+  GOAL
+  POINT
+}
+
+enum FixtureStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  CANCELED
+}
+
+enum MatchdayType {
+  LEAGUE
+  CUP
+  TOURNAMENT
+}
+
+enum SubscriptionType {
+  VIRAGE
+  PELOUSE
+  ENCEINTE_SUP
+  ENCEINTE_INF
+  TRIBUNE
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -86,6 +124,8 @@ model User {
   updatedAt     DateTime  @updatedAt
   orders        Order[]
   cart          Cart?
+  subscriptions SeasonSubscription[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Team {
@@ -96,6 +136,7 @@ model Team {
   gender      TeamGender   @default(MALE)
   category    TeamCategory
   ageGroup    AgeGroup
+  imageUrl    String?
   description String?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -112,6 +153,7 @@ model Player {
   number      Int?
   position    String?
   nationality String?
+  isActive    Boolean @default(true)
   appearances Int     @default(0)
   goals       Int     @default(0)
   ranking     Int?
@@ -120,6 +162,8 @@ model Player {
   imageUrl    String?
   gender      AthleteGender?
   fixtures    Fixture[]
+  fixtureStats FixturePlayerStat[]
+  fixtureEvents FixturePlayerEvent[]
 }
 
 model Staff {
@@ -128,6 +172,7 @@ model Staff {
   team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
   name   String
   role   String
+  imageUrl String?
 }
 
 model Fixture {
@@ -145,11 +190,39 @@ model Fixture {
   homeScore   Int?
   awayScore   Int?
   competition String
-  status      String   @default("SCHEDULED")
-  tournamentCategory TennisTournamentCategory?
-  tournamentTier TournamentTier @default(STANDARD)
+  imageUrl    String?
+  status      FixtureStatus @default(SCHEDULED)
 
   @@index([playerId])
+  playerStats FixturePlayerStat[]
+  events FixturePlayerEvent[]
+}
+
+
+
+model FixturePlayerStat {
+  id        String @id @default(cuid())
+  fixtureId String
+  fixture   Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  playerId  String
+  player    Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  count     Int     @default(0)
+
+  @@unique([fixtureId, playerId])
+  @@index([playerId])
+}
+
+model FixturePlayerEvent {
+  id        String @id @default(cuid())
+  fixtureId String
+  fixture   Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  playerId  String
+  player    Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  type      FixturePlayerEventType
+
+  @@index([fixtureId])
+  @@index([playerId])
+  @@index([type])
 }
 
 model Matchday {
@@ -157,12 +230,19 @@ model Matchday {
   label     String
   season    String?
   sport     Sport?
+  type      MatchdayType @default(LEAGUE)
+  imageUrl  String?
+  
+  tennisCategory TennisTournamentCategory?
+  tournamentTier TournamentTier?
+
   fixtures  Fixture[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([sport])
   @@index([season])
+  @@index([type])
   @@unique([label, season, sport])
 }
 
@@ -246,6 +326,9 @@ model Order {
   userId                String
   user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   status                OrderStatus @default(PENDING)
+  paymentType           OrderPaymentType @default(CASH)
+  deliveryType          OrderDeliveryType @default(PICKUP)
+  validatedAt           DateTime?
   totalCents            Int
   stripePaymentIntentId String?
   createdAt             DateTime    @default(now())
@@ -279,4 +362,82 @@ model AuditLog {
   meta      Json?
   ip        String?
   createdAt DateTime @default(now())
+}
+
+/// Rich-text history block for a sport section on the /club page.
+model ClubSportHistory {
+  id        String   @id @default(cuid())
+  sport     Sport    @unique
+  body      String   // multi-paragraph HTML/markdown allowed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// A single palmarès (title) entry for a sport.
+model ClubTitle {
+  id          String   @id @default(cuid())
+  sport       Sport
+  competition String   // e.g. "Championnat de Tunisie"
+  year        Int
+  detail      String?  // e.g. "Vice-champion", extra notes
+  imageUrl    String?  // optional trophy / celebration image
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([sport, sortOrder])
+}
+
+/// A venue / stadium associated with a sport section.
+model ClubVenue {
+  id        String            @id @default(cuid())
+  sport     Sport             @unique
+  name      String
+  city      String
+  capacity  Int?
+  imageUrl  String?
+  notes     String?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  images    ClubVenueImage[]
+}
+
+/// An individual image belonging to a ClubVenue gallery.
+model ClubVenueImage {
+  id        String    @id @default(cuid())
+  venueId   String
+  venue     ClubVenue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  url       String
+  sortOrder Int       @default(0)
+  isCover   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+
+  @@index([venueId, sortOrder])
+}
+
+model SeasonSubscription {
+  id          String           @id @default(cuid())
+  userId      String?
+  user        User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  season      String           @default("2025/2026")
+  fullName    String
+  birthDate   DateTime
+  seatType              SubscriptionType
+  priceCents            Int
+  status                OrderStatus      @default(PENDING)
+  paymentType           OrderPaymentType @default(CASH)
+  stripePaymentIntentId String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

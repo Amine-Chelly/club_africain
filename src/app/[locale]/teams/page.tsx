@@ -40,10 +40,10 @@ export default async function TeamsPage({ params }: Props) {
             >
               <div className="relative aspect-[16/9]">
                 <Image
-                  src={getSportImageSrc(team.sport)}
+                  src={team.imageUrl ?? getSportImageSrc(team.sport)}
                   alt={`${localizeSport(team.sport, locale)} team`}
                   fill
-                  className="object-cover"
+                  className="object-contain bg-muted/10"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               </div>

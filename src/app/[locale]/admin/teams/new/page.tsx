@@ -1,7 +1,13 @@
 import { createTeamAction } from "@/lib/admin/actions";
 import { getTranslations } from "next-intl/server";
 import { auth } from "@/auth";
-import { localizeAgeGroup, localizeSport, localizeTeamCategory, localizeTeamGender } from "@/lib/db-visual-labels";
+import {
+  localizeAgeGroup,
+  localizeSport,
+  localizeTeamCategory,
+  localizeTeamGender,
+} from "@/lib/db-visual-labels";
+import { AdminImageUrlField } from "@/components/admin/image-url-field";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +34,8 @@ export default async function NewTeamPage({ params }: Props) {
           category: "Catégorie",
           sex: "Sexe",
           age: "Tranche d'âge",
+          image: "Photo de l'équipe",
+          imageEmpty: "Aucune photo pour le moment.",
           description: "Description (optionnelle)",
           create: "Créer",
         }
@@ -40,6 +48,8 @@ export default async function NewTeamPage({ params }: Props) {
             category: "الفئة",
             sex: "الجنس",
             age: "الفئة العمرية",
+            image: "صورة الفريق",
+            imageEmpty: "لا توجد صورة حالياً.",
             description: "الوصف (اختياري)",
             create: "إنشاء",
           }
@@ -51,6 +61,8 @@ export default async function NewTeamPage({ params }: Props) {
             category: "Category",
             sex: "Sex",
             age: "Age group",
+            image: "Team photo",
+            imageEmpty: "No image set yet.",
             description: "Description (optional)",
             create: "Create",
           };
@@ -60,7 +72,7 @@ export default async function NewTeamPage({ params }: Props) {
       <h1 className="text-foreground text-3xl font-bold">{t("teams")}</h1>
       <p className="text-muted mt-2">{ui.subtitle}</p>
 
-      <form action={createTeamAction} method="post" className="mt-8 space-y-4">
+      <form action={createTeamAction} encType="multipart/form-data" className="mt-8 space-y-4">
         <input type="hidden" name="locale" value={locale} />
 
         <label className="flex flex-col gap-1 text-sm">
@@ -133,7 +145,7 @@ export default async function NewTeamPage({ params }: Props) {
           <select
             name="ageGroup"
             required
-          className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
           >
             {ageGroupOptions.map((o) => (
               <option key={o} value={o}>
@@ -142,6 +154,15 @@ export default async function NewTeamPage({ params }: Props) {
             ))}
           </select>
         </label>
+
+        <AdminImageUrlField
+          label={ui.image}
+          name="imageUrl"
+          placeholder=""
+          emptyText={ui.imageEmpty}
+          previewAlt="Team photo preview"
+          helpText="Optional. Paste a local path or external image URL."
+        />
 
         <label className="flex flex-col gap-1 text-sm">
           <span>{ui.description}</span>

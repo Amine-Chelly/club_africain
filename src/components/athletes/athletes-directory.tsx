@@ -17,7 +17,8 @@ type AthleteItem = {
   position: string;
   number: number | null;
   appearances: number;
-  goals: number;
+  sportStatLabel: string;
+  sportStatValue: number;
   singlesRanking: number | null;
   doublesRanking: number | null;
   ranking: number | null;
@@ -33,12 +34,13 @@ type AthletesFiltersLabels = {
   allCategories: string;
   allSports: string;
   allSexes: string;
+  sexMale: string;
+  sexFemale: string;
   empty: string;
   ranking: string;
   singlesRanking: string;
   doublesRanking: string;
   apps: string;
-  goals: string;
 };
 
 type Props = {
@@ -67,6 +69,14 @@ export function AthletesDirectory({ athletes, labels }: Props) {
     }));
   }, [athletes, category]);
 
+  const sexOptions = useMemo(
+    () => [
+      { value: "MALE", label: labels.sexMale },
+      { value: "FEMALE", label: labels.sexFemale },
+    ],
+    [labels.sexFemale, labels.sexMale],
+  );
+
   const sportsByCategory = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const item of athletes) {
@@ -86,11 +96,6 @@ export function AthletesDirectory({ athletes, labels }: Props) {
     }
     return map;
   }, [athletes]);
-
-  const sexOptions = useMemo(
-    () => Array.from(new Map(athletes.map((item) => [item.sex, item.sexLabel])).entries()).map(([value, label]) => ({ value, label })),
-    [athletes],
-  );
 
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -206,14 +211,14 @@ export function AthletesDirectory({ athletes, labels }: Props) {
                 <div className="min-w-0">
                   <p className="text-foreground truncate font-semibold">{athlete.name}</p>
                   <p className="text-muted mt-1 text-sm">
-                    {athlete.sportLabel} - {athlete.teamName} - {athlete.categoryLabel}
+                    {athlete.teamName} - {athlete.categoryLabel}
                   </p>
                   <p className="text-muted mt-1 text-xs">
                     {athlete.sport === "TENNIS" ? "-" : athlete.position}
                     {athlete.number != null ? ` - #${athlete.number}` : ""}
                   </p>
                   <p className="text-muted mt-2 text-xs">
-                    {athlete.appearances} {labels.apps} - {athlete.goals} {labels.goals}
+                    {athlete.appearances} {labels.apps} - {athlete.sportStatValue} {athlete.sportStatLabel}
                     {athlete.sport === "TENNIS"
                       ? ` - ${labels.singlesRanking} ${athlete.singlesRanking != null ? `#${athlete.singlesRanking}` : "-"} - ${labels.doublesRanking} ${athlete.doublesRanking != null ? `#${athlete.doublesRanking}` : "-"}`
                       : athlete.ranking != null

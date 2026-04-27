@@ -3,6 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Sport } from "@/generated/prisma/enums";
 import { localizeMatchdayLabel, localizeSport } from "@/lib/db-visual-labels";
+import Image from "next/image";
+import { getSportImageSrc } from "@/lib/sport-images";
 
 export const dynamic = "force-dynamic";
 
@@ -180,10 +182,21 @@ export default async function AdminMatchdaysPage({ params, searchParams }: Props
             {matchdays.map((matchday) => (
               <tr key={matchday.id}>
                 <td className="border-border border-t px-3 py-3 align-top">
-                  <Link href={`/admin/matchdays/${matchday.id}`} className="text-primary text-sm underline">
-                    {localizeMatchdayLabel(matchday.label, locale)}
-                  </Link>
-                  <div className="text-muted text-xs font-mono mt-1">{matchday.id}</div>
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src={matchday.imageUrl ?? getSportImageSrc(matchday.sport)}
+                      alt={localizeMatchdayLabel(matchday.label, locale)}
+                      width={44}
+                      height={44}
+                      className="h-11 w-11 rounded-lg object-cover border border-border"
+                    />
+                    <div>
+                      <Link href={`/admin/matchdays/${matchday.id}`} className="text-primary text-sm underline">
+                        {localizeMatchdayLabel(matchday.label, locale)}
+                      </Link>
+                      <div className="text-muted text-xs font-mono mt-1">{matchday.id}</div>
+                    </div>
+                  </div>
                 </td>
                 <td className="border-border border-t px-3 py-3 align-top">
                   <span className="text-muted">{localizeSport(matchday.sport, locale)}</span>

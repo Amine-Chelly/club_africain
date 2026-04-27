@@ -3,7 +3,9 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { createFixtureAction } from "@/lib/admin/actions";
 import { notFound } from "next/navigation";
-import { localizeMatchdayLabel, localizeSport } from "@/lib/db-visual-labels";
+import { localizeFixtureStatus, localizeMatchdayLabel, localizeSport } from "@/lib/db-visual-labels";
+import { AdminImageUrlField } from "@/components/admin/image-url-field";
+import { FixtureTeamPlayerFields } from "@/components/admin/fixture-team-player-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -31,18 +33,20 @@ export default async function NewFixturePage({ params }: Props) {
           venue: "Lieu",
           home: "\u00C0 domicile (vs)",
           competition: "Comp\u00E9tition",
-          tournamentCategory: "Cat\u00E9gorie tournoi (tennis)",
-          tournamentTier: "Niveau tournoi",
-          playerOptional: "Joueur (tennis optionnel)",
-          itf: "ITF",
-          atp: "ATP",
-          wta: "WTA",
-          standard: "Standard",
-          grandSlam: "Grand Chelem",
           homeScore: "Score domicile (optionnel)",
           awayScore: "Score ext\u00E9rieur (optionnel)",
           status: "Statut (optionnel)",
           statusHint: "PROGRAMM\u00C9 / TERMIN\u00C9 / etc.",
+          image: "Photo du match",
+          imageEmpty: "Aucune photo pour le moment.",
+          fixturePlayersTitle: "Joueurs impliqu\u00E9s",
+          fixturePlayersHelp:
+            "Ajoutez chaque joueur ayant pris part au match. Mettez 0 pour un joueur apparu sans marquer.",
+          fixturePlayersPlayer: "Joueur",
+          fixturePlayersCount: "Buts / points",
+          fixturePlayersAdd: "Ajouter un joueur",
+          fixturePlayersRemove: "Retirer",
+          fixturePlayersEmpty: "S\u00E9lectionner un joueur",
           add: "Ajouter le match",
         }
       : locale === "ar"
@@ -54,18 +58,20 @@ export default async function NewFixturePage({ params }: Props) {
             venue: "\u0627\u0644\u0645\u0644\u0639\u0628",
             home: "\u0639\u0644\u0649 \u0623\u0631\u0636\u0647 (vs)",
             competition: "\u0627\u0644\u0645\u0633\u0627\u0628\u0642\u0629",
-            tournamentCategory: "\u062A\u0635\u0646\u064A\u0641 \u0627\u0644\u0628\u0637\u0648\u0644\u0629 (\u062A\u0646\u0633)",
-            tournamentTier: "\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0628\u0637\u0648\u0644\u0629",
-            playerOptional: "\u0627\u0644\u0644\u0627\u0639\u0628 (\u062A\u0646\u0633 \u0627\u062E\u062A\u064A\u0627\u0631\u064A)",
-            itf: "ITF",
-            atp: "ATP",
-            wta: "WTA",
-            standard: "\u0639\u0627\u062F\u064A",
-            grandSlam: "\u062C\u0631\u0627\u0646\u062F \u0633\u0644\u0627\u0645",
             homeScore: "\u0646\u062a\u064a\u062c\u0629 \u0635\u0627\u062d\u0628 \u0627\u0644\u0623\u0631\u0636 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)",
             awayScore: "\u0646\u062a\u064a\u062c\u0629 \u0627\u0644\u0636\u064a\u0641 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)",
             status: "\u0627\u0644\u062d\u0627\u0644\u0629 (\u0627\u062e\u062a\u064a\u0627\u0631\u064a)",
             statusHint: "SCHEDULED / FINISHED / ...",
+            image: "\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0628\u0627\u0631\u0627\u0629",
+            imageEmpty: "\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629 \u062D\u0627\u0644\u064A\u0627\u064B.",
+            fixturePlayersTitle: "\u0627\u0644\u0644\u0627\u0639\u0628\u0648\u0646 \u0627\u0644\u0645\u0634\u0627\u0631\u0643\u0648\u0646",
+            fixturePlayersHelp:
+              "\u0623\u0636\u0641 \u0643\u0644 \u0644\u0627\u0639\u0628 \u0634\u0627\u0631\u0643 \u0641\u064A \u0627\u0644\u0645\u0628\u0627\u0631\u0627\u0629. \u0627\u0643\u062A\u0628 0 \u0644\u0644\u0627\u0639\u0628 \u062D\u0636\u0631 \u062F\u0648\u0646 \u062A\u0633\u062C\u064A\u0644.",
+            fixturePlayersPlayer: "\u0627\u0644\u0644\u0627\u0639\u0628",
+            fixturePlayersCount: "\u0627\u0644\u0623\u0647\u062F\u0627\u0641 / \u0627\u0644\u0646\u0642\u0627\u0637",
+            fixturePlayersAdd: "\u0625\u0636\u0627\u0641\u0629 \u0644\u0627\u0639\u0628",
+            fixturePlayersRemove: "\u0625\u0632\u0627\u0644\u0629",
+            fixturePlayersEmpty: "\u0627\u062E\u062A\u0631 \u0644\u0627\u0639\u0628\u0627\u064B",
             add: "\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0628\u0627\u0631\u0627\u0629",
           }
         : {
@@ -76,26 +82,32 @@ export default async function NewFixturePage({ params }: Props) {
             venue: "Venue",
             home: "Home (vs)",
             competition: "Competition",
-            tournamentCategory: "Tournament category (tennis)",
-            tournamentTier: "Tournament tier",
-            playerOptional: "Player (tennis optional)",
-            itf: "ITF",
-            atp: "ATP",
-            wta: "WTA",
-            standard: "Standard",
-            grandSlam: "Grand Slam",
             homeScore: "Home score (optional)",
             awayScore: "Away score (optional)",
             status: "Status (optional)",
             statusHint: "SCHEDULED / FINISHED / etc.",
+            image: "Fixture image",
+            imageEmpty: "No image set yet.",
+            fixturePlayersTitle: "Players involved",
+            fixturePlayersHelp:
+              "Add every player who featured in the fixture. Use 0 for players who appeared without scoring.",
+            fixturePlayersPlayer: "Player",
+            fixturePlayersCount: "Goals / points",
+            fixturePlayersAdd: "Add player",
+            fixturePlayersRemove: "Remove",
+            fixturePlayersEmpty: "Select a player",
             add: "Add fixture",
           };
 
   const matchday = await prisma.matchday.findUnique({ where: { id: matchdayId } });
   if (!matchday) notFound();
 
-  const teams = await prisma.team.findMany({ orderBy: { name: "asc" } });
+  const teams = await prisma.team.findMany({
+    where: matchday.sport ? { sport: matchday.sport } : undefined,
+    orderBy: { name: "asc" },
+  });
   const players = await prisma.player.findMany({
+    where: { isActive: true },
     include: { team: true },
     orderBy: [{ team: { name: "asc" } }, { name: "asc" }],
   });
@@ -111,40 +123,9 @@ export default async function NewFixturePage({ params }: Props) {
         </Link>
       </div>
 
-      <form action={createFixtureAction} method="post" className="mt-8 space-y-4">
+      <form action={createFixtureAction} encType="multipart/form-data" className="mt-8 space-y-4">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="matchdayId" value={matchdayId} />
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span>{ui.team}</span>
-          <select
-            name="teamId"
-            required
-            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-          >
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name} ({localizeSport(team.sport, locale)})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span>{ui.playerOptional}</span>
-          <select
-            name="playerId"
-            defaultValue=""
-            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-          >
-            <option value="">-</option>
-            {players.map((player) => (
-              <option key={player.id} value={player.id}>
-                {player.name} ({player.team.name})
-              </option>
-            ))}
-          </select>
-        </label>
 
         <label className="flex flex-col gap-1 text-sm">
           <span>{ui.datetime}</span>
@@ -191,32 +172,6 @@ export default async function NewFixturePage({ params }: Props) {
           </label>
         </div>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span>{ui.tournamentCategory}</span>
-          <select
-            name="tournamentCategory"
-            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-            defaultValue=""
-          >
-            <option value="">-</option>
-            <option value="ITF">{ui.itf}</option>
-            <option value="ATP">{ui.atp}</option>
-            <option value="WTA">{ui.wta}</option>
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm">
-          <span>{ui.tournamentTier}</span>
-          <select
-            name="tournamentTier"
-            className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-            defaultValue="STANDARD"
-          >
-            <option value="STANDARD">{ui.standard}</option>
-            <option value="GRAND_SLAM">{ui.grandSlam}</option>
-          </select>
-        </label>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
             <span>{ui.homeScore}</span>
@@ -242,12 +197,48 @@ export default async function NewFixturePage({ params }: Props) {
 
         <label className="flex flex-col gap-1 text-sm">
           <span>{ui.status}</span>
-          <input
+          <select
             name="status"
+            defaultValue="SCHEDULED"
             className="border-border bg-background rounded-md border px-3 py-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
-            placeholder={ui.statusHint}
-          />
+          >
+            <option value="SCHEDULED">{localizeFixtureStatus("SCHEDULED", locale)}</option>
+            <option value="LIVE">{localizeFixtureStatus("LIVE", locale)}</option>
+            <option value="FINISHED">{localizeFixtureStatus("FINISHED", locale)}</option>
+            <option value="CANCELED">{localizeFixtureStatus("CANCELED", locale)}</option>
+          </select>
         </label>
+
+        <AdminImageUrlField
+          label={ui.image}
+          name="imageUrl"
+          placeholder=""
+          emptyText={ui.imageEmpty}
+          previewAlt="Fixture image preview"
+          helpText="Optional. Paste a local path or external image URL."
+        />
+
+        <FixtureTeamPlayerFields
+          teamLabel={ui.team}
+          playerEditorTitle={ui.fixturePlayersTitle}
+          playerEditorHelpText={ui.fixturePlayersHelp}
+          playerLabel={ui.fixturePlayersPlayer}
+          countLabel={ui.fixturePlayersCount}
+          addLabel={ui.fixturePlayersAdd}
+          removeLabel={ui.fixturePlayersRemove}
+          emptyText={ui.fixturePlayersEmpty}
+          teams={teams.map((team) => ({
+            id: team.id,
+            label: `${team.name} (${localizeSport(team.sport, locale)} - ${team.category} / ${team.gender} / ${team.ageGroup})`,
+            sport: team.sport,
+          }))}
+          players={players.map((player) => ({
+            id: player.id,
+            name: player.name,
+            teamId: player.teamId,
+            teamName: player.team.name,
+          }))}
+        />
 
         <button
           type="submit"

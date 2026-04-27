@@ -37,6 +37,11 @@ export async function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/fixtures" className="hover:text-primary transition-colors">
+                  {tNav("fixtures")}
+                </Link>
+              </li>
+              <li>
                 <Link href="/shop" className="hover:text-primary transition-colors">
                   {tNav("shop")}
                 </Link>

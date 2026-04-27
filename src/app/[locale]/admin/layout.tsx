@@ -24,6 +24,7 @@ export default async function AdminLayout({ children, params }: Props) {
     { href: "/admin/orders", label: t("orders") },
     { href: "/admin/newsletters", label: t("newsletters") },
     { href: "/admin/matchdays", label: t("matchdays") },
+    { href: "/admin/subscriptions", label: t("subscriptions") },
   ] as const;
 
   return (
@@ -31,7 +32,7 @@ export default async function AdminLayout({ children, params }: Props) {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_1fr]">
         <aside className="rounded-xl border-border border bg-card p-4">
           <p className="text-muted text-sm font-medium">{t("title")}</p>
-          <nav className="mt-4 space-y-1" aria-label="Admin navigation">
+          <nav className="mt-4 space-y-1" aria-label={t("title")}>
             {nav.map((item) => (
               <Link
                 key={item.href}

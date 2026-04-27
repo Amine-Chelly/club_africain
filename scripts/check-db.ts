@@ -29,9 +29,23 @@ async function main() {
       _count: { select: { players: true, staff: true, fixtures: true } },
     },
   });
+  const teamGenders = await prisma.team.groupBy({
+    by: ["gender"],
+    _count: { _all: true },
+    orderBy: { gender: "asc" },
+  });
+  const playerGenders = await prisma.player.groupBy({
+    by: ["gender"],
+    _count: { _all: true },
+    orderBy: { gender: "asc" },
+  });
 
   console.log("COUNTS");
   console.log(JSON.stringify({ teams, players, staff, fixtures, products, sizeStocks, images }, null, 2));
+  console.log("TEAM GENDERS");
+  console.log(JSON.stringify(teamGenders, null, 2));
+  console.log("PLAYER GENDERS");
+  console.log(JSON.stringify(playerGenders, null, 2));
   console.log("TEAMS");
   for (const t of teamRows) {
     console.log(

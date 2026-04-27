@@ -23,7 +23,7 @@ export default async function NewPlayerPage({ params }: Props) {
       <h1 className="text-foreground text-3xl font-bold">{t("teams")} - Nouveau joueur</h1>
       <p className="text-muted mt-2">Ajout dans l&apos;equipe</p>
 
-      <form action={createPlayerAction} method="post" className="mt-8 space-y-4">
+      <form action={createPlayerAction} encType="multipart/form-data" className="mt-8 space-y-4">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="teamId" value={teamId} />
 
@@ -54,6 +54,19 @@ export default async function NewPlayerPage({ params }: Props) {
               placeholder="TN"
               maxLength={3}
             />
+          </label>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="flex items-center gap-2 text-sm mt-4">
+            <input
+              type="checkbox"
+              name="isActive"
+              value="true"
+              defaultChecked={true}
+              className="h-4 w-4 rounded border-border text-primary focus:ring-ring focus:ring-2"
+            />
+            <span className="font-medium">{t("playerActive")}</span>
           </label>
         </div>
 

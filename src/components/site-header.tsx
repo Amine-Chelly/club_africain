@@ -4,14 +4,18 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Link } from "@/i18n/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 export async function SiteHeader() {
-  const [session, t] = await Promise.all([auth(), getTranslations("nav")]);
+  const [session, t, locale] = await Promise.all([auth(), getTranslations("nav"), getLocale()]);
+  const isRtl = locale === "ar";
 
   return (
     <header className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/90 sticky top-0 z-50 w-full border-b border-b-[color-mix(in_srgb,var(--ca-red)_22%,transparent)] backdrop-blur dark:border-b-[color-mix(in_srgb,var(--ca-red)_35%,#1a2d4a)]">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8">
+      <div
+        dir={isRtl ? "rtl" : "ltr"}
+        className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6 lg:px-8"
+      >
         <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
           <ClubLogo size="lg" withHomeLink priority />
           <Link
@@ -23,7 +27,7 @@ export async function SiteHeader() {
         </div>
         <nav
           className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-2"
-          aria-label="Main"
+          aria-label={t("mainNavigation")}
         >
           <LocaleSwitcher />
           <ThemeToggle />
@@ -46,10 +50,22 @@ export async function SiteHeader() {
             {t("athletes")}
           </Link>
           <Link
+            href="/fixtures"
+            className="text-muted hover:text-primary focus-visible:ring-primary rounded-md px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-3"
+          >
+            {t("fixtures")}
+          </Link>
+          <Link
             href="/shop"
             className="text-muted hover:text-primary focus-visible:ring-primary rounded-md px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-3"
           >
             {t("shop")}
+          </Link>
+          <Link
+            href="/subscriptions"
+            className="text-muted hover:text-primary focus-visible:ring-primary rounded-md px-2 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:px-3"
+          >
+            {t("subscriptions")}
           </Link>
           <Link
             href="/shop/cart"

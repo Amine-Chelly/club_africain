@@ -84,6 +84,14 @@ export default async function AdminDashboardPage({ params }: Props) {
             {ui.manageMatchdays}
           </Link>
         </div>
+
+        <div className="border-border bg-card rounded-xl border p-4">
+          <p className="text-muted text-sm">Club</p>
+          <p className="text-foreground text-2xl font-bold">⚙</p>
+          <Link href="/admin/club" className="text-primary mt-2 inline-block text-sm underline">
+            {locale === "fr" ? "Gérer le club" : locale === "ar" ? "إدارة النادي" : "Manage club"}
+          </Link>
+        </div>
       </div>
 
       <section className="mt-12">

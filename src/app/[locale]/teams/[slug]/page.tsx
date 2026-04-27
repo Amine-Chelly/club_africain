@@ -2,12 +2,15 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
+import { Link } from "@/i18n/navigation";
+import { formatDateTime } from "@/lib/date-format";
 import {
   localizeAgeGroup,
   localizeMatchdayLabel,
   localizeSport,
   localizeTeamGender,
   localizeTournamentCategory,
+  localizeTournamentTier,
   localizeTeamCategory,
   shortLabels,
 } from "@/lib/db-visual-labels";
@@ -90,6 +93,7 @@ export default async function TeamDetailPage({ params }: Props) {
   const team = await prisma.team.findUnique({
     where: { slug },
     include: {
+      // imageUrl is now editable in admin and can override the sport banner.
       players: { orderBy: [{ number: "asc" }, { name: "asc" }] },
       staff: { orderBy: { name: "asc" } },
       fixtures: {
@@ -131,7 +135,7 @@ export default async function TeamDetailPage({ params }: Props) {
   const tennisFixturesByTournament =
     team.sport === "TENNIS"
       ? team.fixtures.reduce<Record<string, typeof team.fixtures>>((acc, fixture) => {
-          const key = fixture.competition;
+          const key = fixture.matchday?.label ?? fixture.competition;
           if (!acc[key]) acc[key] = [];
           acc[key].push(fixture);
           return acc;
@@ -143,10 +147,10 @@ export default async function TeamDetailPage({ params }: Props) {
       <section className="border-border bg-card rounded-3xl border p-6 sm:p-8">
         <div className="relative mb-6 aspect-[16/6] overflow-hidden rounded-2xl">
           <Image
-            src={getSportImageSrc(team.sport)}
+            src={team.imageUrl ?? getSportImageSrc(team.sport)}
             alt={`${localizeSport(team.sport, locale)} team banner`}
             fill
-            className="object-cover"
+            className="object-contain bg-muted/10"
             sizes="(max-width: 1024px) 100vw, 1200px"
           />
         </div>
@@ -249,36 +253,39 @@ export default async function TeamDetailPage({ params }: Props) {
                   <h3 className="text-foreground text-base font-semibold">
                     {tournament}{" "}
                     <span className="text-muted text-sm font-normal">
-                      ({localizeTournamentCategory(fixtures[0]?.tournamentCategory, locale)})
+                      ({localizeTournamentCategory(fixtures[0]?.matchday?.tennisCategory, locale)} ·{" "}
+                      {localizeTournamentTier(fixtures[0]?.matchday?.tournamentTier, locale)})
                     </span>
                   </h3>
                 </div>
                 <ul className="divide-y divide-border">
                   {fixtures.map((fixture) => (
-                    <li key={fixture.id} className="px-4 py-3 text-sm">
-                      <div className="flex flex-wrap justify-between gap-2">
-                        <span className="inline-flex items-center gap-2">
-                          <Image
-                            src={getSportImageSrc(team.sport)}
-                            alt={`${localizeSport(team.sport, locale)} icon`}
-                            width={18}
-                            height={18}
-                            className="rounded object-cover"
-                          />
-                          <span>
-                            {fixture.matchday ? `${localizeMatchdayLabel(fixture.matchday.label, locale)} - ` : ""}
-                            {fixture.player ? `${fixture.player.name} vs ` : "vs "}
-                            {fixture.opponent}
+                    <li key={fixture.id}>
+                      <Link href={`/fixtures/${fixture.id}`} className="block px-4 py-3 text-sm transition-colors hover:bg-muted/30">
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <span className="inline-flex items-center gap-2">
+                            <Image
+                              src={fixture.imageUrl ?? getSportImageSrc(team.sport)}
+                              alt={`${localizeSport(team.sport, locale)} icon`}
+                              width={18}
+                              height={18}
+                              className="rounded object-cover"
+                            />
+                            <span>
+                              {fixture.matchday ? `${localizeMatchdayLabel(fixture.matchday.label, locale)} - ` : ""}
+                              {fixture.player ? `${fixture.player.name} vs ` : "vs "}
+                              {fixture.opponent}
+                            </span>
                           </span>
-                        </span>
-                        <span className="text-muted">{new Date(fixture.kickoffAt).toLocaleString()}</span>
-                      </div>
-                      <p className="text-muted text-xs">{fixture.venue}</p>
-                      {fixture.homeScore != null && fixture.awayScore != null ? (
-                        <p className="text-foreground mt-1 font-semibold">
-                          {fixture.homeScore} - {fixture.awayScore}
-                        </p>
-                      ) : null}
+                          <span className="text-muted">{formatDateTime(fixture.kickoffAt, locale)}</span>
+                        </div>
+                        <p className="text-muted text-xs">{fixture.venue}</p>
+                        {fixture.homeScore != null && fixture.awayScore != null ? (
+                          <p className="text-foreground mt-1 font-semibold">
+                            {fixture.homeScore} - {fixture.awayScore}
+                          </p>
+                        ) : null}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -288,31 +295,33 @@ export default async function TeamDetailPage({ params }: Props) {
         ) : (
           <ul className="border-border mt-4 divide-y rounded-2xl border">
             {team.fixtures.map((fixture) => (
-              <li key={fixture.id} className="px-4 py-3 text-sm">
-                <div className="flex flex-wrap justify-between gap-2">
-                  <span className="inline-flex items-center gap-2">
-                    <Image
-                      src={getSportImageSrc(team.sport)}
-                      alt={`${localizeSport(team.sport, locale)} icon`}
-                      width={18}
-                      height={18}
-                      className="rounded object-cover"
-                    />
-                    <span>
-                      {fixture.matchday ? `${localizeMatchdayLabel(fixture.matchday.label, locale)} - ` : ""}
-                      {fixture.isHome ? "vs" : "@"} {fixture.opponent}
+              <li key={fixture.id}>
+                <Link href={`/fixtures/${fixture.id}`} className="block px-4 py-3 text-sm transition-colors hover:bg-muted/30">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="inline-flex items-center gap-2">
+                      <Image
+                        src={fixture.imageUrl ?? getSportImageSrc(team.sport)}
+                        alt={`${localizeSport(team.sport, locale)} icon`}
+                        width={18}
+                        height={18}
+                        className="rounded object-cover"
+                      />
+                      <span>
+                        {fixture.matchday ? `${localizeMatchdayLabel(fixture.matchday.label, locale)} - ` : ""}
+                        {fixture.isHome ? "vs" : "@"} {fixture.opponent}
+                      </span>
                     </span>
-                  </span>
-                  <span className="text-muted">{new Date(fixture.kickoffAt).toLocaleString()}</span>
-                </div>
-                <p className="text-muted text-xs">
-                  {fixture.competition} - {fixture.venue}
-                </p>
-                {fixture.homeScore != null && fixture.awayScore != null && (
-                  <p className="text-foreground mt-1 font-semibold">
-                    {fixture.homeScore} - {fixture.awayScore}
+                    <span className="text-muted">{formatDateTime(fixture.kickoffAt, locale)}</span>
+                  </div>
+                  <p className="text-muted text-xs">
+                    {fixture.competition} - {fixture.venue}
                   </p>
-                )}
+                  {fixture.homeScore != null && fixture.awayScore != null && (
+                    <p className="text-foreground mt-1 font-semibold">
+                      {fixture.homeScore} - {fixture.awayScore}
+                    </p>
+                  )}
+                </Link>
               </li>
             ))}
           </ul>
@@ -322,3 +331,4 @@ export default async function TeamDetailPage({ params }: Props) {
     </div>
   );
 }
+

@@ -74,11 +74,41 @@ export function localizeFixtureStatus(status: string | null | undefined, locale:
   if (!status) return "-";
   const map: Record<string, { fr: string; en: string; ar: string }> = {
     SCHEDULED: { fr: "Programm\u00E9", en: "Scheduled", ar: "\u0645\u062c\u062f\u0648\u0644" },
+    LIVE: { fr: "En direct", en: "Live", ar: "\u0645\u0628\u0627\u0634\u0631" },
     FINISHED: { fr: "Termin\u00E9", en: "Finished", ar: "\u0645\u0646\u062a\u0647\u064a" },
-    CANCELLED: { fr: "Annul\u00E9", en: "Cancelled", ar: "\u0645\u0644\u063a\u0649" },
-    POSTPONED: { fr: "Report\u00E9", en: "Postponed", ar: "\u0645\u0624\u062c\u0644" },
+    CANCELED: { fr: "Annul\u00E9", en: "Canceled", ar: "\u0645\u0644\u063a\u0649" },
   };
   return map[status] ? pick(locale, map[status]) : status;
+}
+
+export function localizeOrderStatus(status: string | null | undefined, locale: string) {
+  if (!status) return "-";
+  const map: Record<string, { fr: string; en: string; ar: string }> = {
+    PENDING: { fr: "Commandée", en: "Ordered", ar: "\u0637\u0644\u0628\u062a" },
+    PAID: { fr: "Payée", en: "Payed", ar: "\u0645\u062f\u0641\u0648\u0639\u0629" },
+    SHIPPED: { fr: "Livrée", en: "Delivered", ar: "\u0645\u0633\u0644\u0645\u0629" },
+    CANCELLED: { fr: "Annulée", en: "Cancelled", ar: "\u0645\u0644\u063a\u0627\u0629" },
+  };
+  return map[status] ? pick(locale, map[status]) : status;
+}
+
+export function localizeOrderPaymentType(type: string | null | undefined, locale: string) {
+  if (!type) return "-";
+  const map: Record<string, { fr: string; en: string; ar: string }> = {
+    CASH: { fr: "Espèces", en: "Cash", ar: "\u0646\u0642\u062f\u064b\u0627" },
+    CARD: { fr: "Carte", en: "Card", ar: "\u0628\u0637\u0627\u0642\u0629" },
+    BANK_TRANSFER: { fr: "Virement", en: "Bank transfer", ar: "\u062A\u062D\u0648\u064A\u0644 \u0628\u0646\u0643\u064A" },
+  };
+  return map[type] ? pick(locale, map[type]) : type;
+}
+
+export function localizeOrderDeliveryType(type: string | null | undefined, locale: string) {
+  if (!type) return "-";
+  const map: Record<string, { fr: string; en: string; ar: string }> = {
+    PICKUP: { fr: "Retrait", en: "Pickup", ar: "\u0627\u0633\u062A\u0644\u0627\u0645" },
+    DELIVERY: { fr: "Livraison", en: "Delivery", ar: "\u062A\u0648\u0635\u064A\u0644" },
+  };
+  return map[type] ? pick(locale, map[type]) : type;
 }
 
 export function localizeTournamentCategory(category: string | null | undefined, locale: string) {
@@ -89,6 +119,15 @@ export function localizeTournamentCategory(category: string | null | undefined, 
     WTA: { fr: "WTA (Femmes)", en: "WTA (Women)", ar: "WTA (\u0633\u064A\u062F\u0627\u062A)" },
   };
   return map[category] ? pick(locale, map[category]) : category;
+}
+
+export function localizeTournamentTier(tier: string | null | undefined, locale: string) {
+  if (!tier) return "-";
+  const map: Record<string, { fr: string; en: string; ar: string }> = {
+    GRAND_SLAM: { fr: "Grand Chelem", en: "Grand Slam", ar: "\u062C\u0631\u0627\u0646\u062F \u0633\u0644\u0627\u0645" },
+    STANDARD: { fr: "Standard", en: "Standard", ar: "\u0642\u064A\u0627\u0633\u064A" },
+  };
+  return map[tier] ? pick(locale, map[tier]) : tier;
 }
 
 export function localizeMatchdayLabel(label: string, locale: string) {

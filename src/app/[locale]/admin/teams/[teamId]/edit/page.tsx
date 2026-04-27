@@ -3,7 +3,13 @@ import { updateTeamAction, deleteTeamAction } from "@/lib/admin/actions";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { localizeAgeGroup, localizeSport, localizeTeamCategory, localizeTeamGender } from "@/lib/db-visual-labels";
+import {
+  localizeAgeGroup,
+  localizeSport,
+  localizeTeamCategory,
+  localizeTeamGender,
+} from "@/lib/db-visual-labels";
+import { AdminImageUrlField } from "@/components/admin/image-url-field";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +36,8 @@ export default async function EditTeamPage({ params }: Props) {
           category: "Catégorie",
           sex: "Sexe",
           age: "Tranche d'âge",
+          image: "Photo de l'équipe",
+          imageEmpty: "Aucune photo pour le moment.",
           description: "Description (optionnelle)",
           save: "Enregistrer",
           delete: "Supprimer l'équipe",
@@ -43,6 +51,8 @@ export default async function EditTeamPage({ params }: Props) {
             category: "الفئة",
             sex: "الجنس",
             age: "الفئة العمرية",
+            image: "صورة الفريق",
+            imageEmpty: "لا توجد صورة حالياً.",
             description: "الوصف (اختياري)",
             save: "حفظ",
             delete: "حذف الفريق",
@@ -55,6 +65,8 @@ export default async function EditTeamPage({ params }: Props) {
             category: "Category",
             sex: "Sex",
             age: "Age group",
+            image: "Team photo",
+            imageEmpty: "No image set yet.",
             description: "Description (optional)",
             save: "Save",
             delete: "Delete team",
@@ -68,7 +80,7 @@ export default async function EditTeamPage({ params }: Props) {
       <h1 className="text-foreground text-3xl font-bold">{t("teams")}</h1>
       <p className="text-muted mt-2">{ui.subtitle}</p>
 
-      <form action={updateTeamAction} method="post" className="mt-8 space-y-4">
+      <form action={updateTeamAction} encType="multipart/form-data" className="mt-8 space-y-4">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="id" value={team.id} />
 
@@ -158,6 +170,16 @@ export default async function EditTeamPage({ params }: Props) {
           </select>
         </label>
 
+        <AdminImageUrlField
+          label={ui.image}
+          name="imageUrl"
+          defaultValue={team.imageUrl}
+          placeholder=""
+          emptyText={ui.imageEmpty}
+          previewAlt={`${team.name} image preview`}
+          helpText="Optional. Paste a local path or external image URL."
+        />
+
         <label className="flex flex-col gap-1 text-sm">
           <span>{ui.description}</span>
           <textarea
@@ -176,7 +198,7 @@ export default async function EditTeamPage({ params }: Props) {
         </button>
       </form>
 
-      <form action={deleteTeamAction} method="post" className="mt-8">
+      <form action={deleteTeamAction} encType="multipart/form-data" className="mt-8">
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="id" value={team.id} />
         <button
